@@ -17,61 +17,53 @@
 */
 
 #pragma once
-#ifndef _KNET_ENV_H_
-#define _KNET_ENV_H_
+#ifndef _KNET_SOCKET_H_
+#define _KNET_SOCKET_H_
+
 #include "knet_base.h"
 #include <chrono>
 
-class KNetEnv
+#include "knet_addr.h"
+#include "knet_env.h"
+
+
+enum KNTS_STATE: u32
+{
+    KNTS_INVALID = 0,
+    KNTS_LOCAL_INITED,
+    KNTS_BINDED,
+    KNTS_CONNECTED,
+    KNTS_HANDSHAKE_CH,
+    KNTS_HANDSHAKE_SH,
+    KNTS_ESTABLISHED,
+    KNTS_LINGER,
+};
+
+class KNetSocket
 {
 public:
-	KNetEnv()
-	{
-		Startup();
-	}
-	~KNetEnv()
-	{
-		CleanUp();
-	}
-	static s32 Startup()
-	{
-#ifdef _WIN32
-		WSADATA wsa_data;
-		s32 ret = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-		if (ret != NO_ERROR)
-		{
-			return -1;
-		}
-#endif
-		return 0;
-	}
+    KNetSocket()
+    {
+        socket_ = INVALID_SOCKET;
+        state_ = KNTS_INVALID;
+    }
+    ~KNetSocket()
+    {
 
-	static void CleanUp()
-	{
-#ifdef _WIN32
-		WSACleanup();
-#endif
-	}
+    }
+    
+    s32 InitLocal()
 
-	static s32 GetLastError()
-	{
-#ifdef _WIN32
-		return WSAGetLastError();
-#else
-		return errno;
-#endif
-	}
 
-	static s64 GetNowMS()
-	{
-		return  std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	}
 
+private:
+    KNTS_STATE state_;
+    SOCKET socket_;
+    KNetAddress local_;
+    KNetAddress remote_;
 };
 
 
 
 
-#endif
-
-
+#endif   

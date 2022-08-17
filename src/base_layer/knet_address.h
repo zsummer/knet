@@ -21,10 +21,11 @@
 #define _KNET_ADDR_H_
 #include "knet_base.h"
 #include <chrono>
+#include "knet_env.h"
 
 static constexpr s32 KNET_READABLE_ADDR_LEN = INET6_ADDRSTRLEN + 10;
 
-struct KNetAddr
+struct KNetAddress
 {
     union
     {
@@ -34,7 +35,7 @@ struct KNetAddr
     } real_addr_;
     char debug_string[KNET_READABLE_ADDR_LEN];
 
-    KNetAddr()
+    KNetAddress()
     {
         real_addr_.in.sa_family = AF_UNSPEC;
         debug_string[0] = '\0';
@@ -53,23 +54,39 @@ struct KNetAddr
     sockaddr_in6& sockaddr_in6_ref() { return real_addr_.in6; }
 
 
-    void reset(s32 family)
+
+
+    s32 reset_v4()
+    {
+        real_addr_.in4.sin_addr.s_addr = INADDR_ANY;
+        real_addr_.in4.sin_family = AF_INET;
+        format_v4();
+        return 0;
+    }
+    s32 reset_v6()
+    {
+        real_addr_.in6.sin6_addr = IN6ADDR_ANY_INIT;
+        real_addr_.in6.sin6_family = AF_INET6;
+        format_v6();
+        return 0;
+    }
+
+    s32 reset(s32 family)
     {
         if (family == AF_INET)
         {
-            real_addr_.in4.sin_addr.s_addr = INADDR_ANY;
-            real_addr_.in4.sin_family = family;
+            return reset_v4();
         }
         else
         {
-            real_addr_.in6.sin6_addr = IN6ADDR_ANY_INIT;
-            real_addr_.in6.sin6_family = family;
+            return reset_v6();
         }
-        format();
-        //other not support 
+        return 0;
     }
 
-    void reset(const sockaddr& addr)
+
+
+    s32 reset(const sockaddr& addr)
     {
         if (addr.sa_family == AF_INET)
         {
@@ -81,7 +98,67 @@ struct KNetAddr
         }
         format();
         //other not support 
+        return 0;
     }
+
+    u32 check_family(const char* ip)
+    {
+        u32 result = AF_INET;
+        while (ip != NULL && *ip != '\0')
+        {
+            if (*ip == ':')
+            {
+                result = AF_INET6;
+            }
+            if (!std::isxdigit(*ip) && !std::isblank(*ip) && *ip != '.' && *ip !=':')
+            {
+                return AF_UNSPEC;
+            }
+            ip++;
+        }
+        return result;
+    }
+
+    void clean_socket_addr()
+    {
+        memset(&real_addr_, 0, sizeof(real_addr_));
+    }
+
+    s32 reset_ip_v4(const char* ip)
+    {
+        s32 ret = inet_pton(AF_INET, ip, &real_addr_.in4.sin_addr);
+        if (ret < 0)
+        {
+            return KNetEnv::GetLastError();
+        }
+        return 0;
+    }
+    s32 reset_ip_v6(const char* ip)
+    {
+        s32 ret = inet_pton(AF_INET6, ip, &real_addr_.in6.sin6_addr);
+        if (ret < 0)
+        {
+            return KNetEnv::GetLastError();
+        }
+        return 0;
+    }
+
+    s32 reset(const char * ip,  u32 port)
+    {
+        u32 family = check_family(ip);
+        if (addr.sa_family == AF_INET)
+        {
+            real_addr_.in = addr;
+        }
+        else if (addr.sa_family == AF_INET6)
+        {
+            real_addr_.in6 = *(sockaddr_in6*)&addr;
+        }
+        format();
+        //other not support 
+        return 0;
+    }
+
 
 
 
@@ -115,12 +192,53 @@ struct KNetAddr
         }
     }
 
+    void format_v4()
+    {
+        debug_string[0] = '\0';
+        if (inet_ntop(family(), &real_addr_.in4.sin_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
+        {
+            char* p = &debug_string[0];
+            while (p != '\0')
+            {
+                p++;
+            }
+            sprintf(p, ":%d", ntohs(real_addr_.in4.sin_port));
+        }
+    }
+
+
+    void format_v6()
+    {
+        debug_string[0] = '\0';
+        if (inet_ntop(family(), &real_addr_.in6.sin6_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
+        {
+            char* p = &debug_string[0];
+            while (p != '\0')
+            {
+                p++;
+            }
+            sprintf(p, ":%d", ntohs(real_addr_.in6.sin6_port));
+        }
+    }
+
+    void format()
+    {
+        if (family() == AF_INET)
+        {
+            format_v4();
+        }
+        else if (family() == AF_INET6)
+        {
+            format_v6();
+        }
+    }
+
 
 
     void fill_cmsghdr(cmsghdr* cmsg) const
     {
 #if defined(__linux__) || defined(__ANDROID__)
-        if (dst_addr_type_ == AddrType::IPV4)
+        if (family() == AF_INET4)
         {
             cmsg->cmsg_level = IPPROTO_IP;
             cmsg->cmsg_type = IP_PKTINFO;
@@ -129,7 +247,7 @@ struct KNetAddr
             ::memset(pkt_info, 0, cmsg->cmsg_len);
             pkt_info->ipi_spec_dst = real_addr_.in4.in_addr_;
         }
-        else if (dst_addr_type_ == AddrType::IPV6)
+        else if (family() == AF_INET6)
         {
             cmsg->cmsg_level = IPPROTO_IPV6;
             cmsg->cmsg_type = IPV6_PKTINFO;
@@ -140,14 +258,12 @@ struct KNetAddr
         }
 #endif
     }
-
-
 };
 
 
 
 
-static const s32 s = sizeof(KNetAddr);
-
-
 #endif
+
+
+
