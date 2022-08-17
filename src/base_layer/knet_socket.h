@@ -59,22 +59,31 @@ public:
             return -1;
         }
         s32 ret = local_.reset(localhost, localport);
-        ret |= remote_.reset(remote_ip, remote_port);
         if (ret != 0)
         {
             return -2;
         }
+        if (remote_ip != NULL)
+        {
+            ret = remote_.reset(remote_ip, remote_port);
+            if (ret != 0)
+            {
+                return -3;
+            }
+        }
+
+
         socket_ = socket(local_.family(), SOCK_DGRAM, 0);
         if (socket_ == INVALID_SOCKET)
         {
-            return -3;
+            return -4;
         }
         state_ = KNTS_LOCAL_INITED;
         ret = bind(socket_, local_.sockaddr_ptr(), local_.sockaddr_len());
         if (ret != 0)
         {
             DestroySocket();
-            return -4;
+            return -5;
         }
         
         local_.reset_from_socket(socket_);
@@ -106,6 +115,7 @@ public:
     
 public:
     KNTS_STATE state() { return state_; }
+    KNTS_STATE set_state(KNTS_STATE s) { state_ = s; return state_; }
     SOCKET skt() { return socket_; }
     KNetAddress& local() { return local_; }
     KNetAddress& remote() { return remote_; }

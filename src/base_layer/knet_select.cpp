@@ -23,7 +23,7 @@
 
 
 
-s32 KNetSelect(KNetSockets& sets, SocketEvent on_tick, SocketEvent readable, s64 wait_ms)
+s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 {
 	struct timeval tv;
 	tv.tv_sec = 0;
@@ -36,7 +36,7 @@ s32 KNetSelect(KNetSockets& sets, SocketEvent on_tick, SocketEvent readable, s64
 	SOCKET max_fd = -1;
 	for (auto& s : sets)
 	{
-		on_tick(s, enter_now_ms);
+		OnSocketTick(s, enter_now_ms);
 		if (s.state() < KNTS_BINDED || s.state() >= KNTS_LINGER)
 		{
 			continue;
@@ -88,7 +88,7 @@ s32 KNetSelect(KNetSockets& sets, SocketEvent on_tick, SocketEvent readable, s64
 
 		if (FD_ISSET(s.skt(), &rdfds))
 		{
-			readable(s, post_now_ms);
+			OnSocketReadable(s, post_now_ms);
 		}
 	}
 	return 0;
