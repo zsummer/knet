@@ -33,7 +33,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 
 	fd_set rdfds;
 	FD_ZERO(&rdfds);
-	SOCKET max_fd = -1;
+	SOCKET max_fd = -1; //windows is error but will ignore
 	for (auto& s : sets)
 	{
 		OnSocketTick(s, enter_now_ms);
@@ -53,14 +53,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 		FD_SET(s.skt(), &rdfds);
 	}
 
-	if (max_fd == -1)
-	{
-		if (wait_ms > 0)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
-		}
-		return 0;
-	}
+
 
 	s32 ret = select(max_fd + 1, &rdfds, NULL, NULL, &tv);
 	if (ret < 0)

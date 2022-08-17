@@ -25,13 +25,24 @@
 #include "knet_select.h"
 #include "knet_socket.h"
 
+struct KNetConfig
+{
+	std::string localhost;
+	u16 localport;
+	std::string remote_ip;
+	u16 remote_port;
+};
+
 class KNetController: public KNetSelect
 {
 public:
-	using MultiChannel = std::vector<std::pair<std::string, u16>>;
+	static const u32 MAX_SESSION_CONFIGS = 2*3*2;
+	using KNetConfigs = zarray<KNetConfig, MAX_SESSION_CONFIGS>;
 	KNetController();
 	~KNetController();
-	s32 StartServer(const MultiChannel& channels);
+	s32 StartServer(const KNetConfigs& configs);
+	s32 StartConnect(std::string uuid, const KNetConfigs& configs);
+	s32 DoSelect();
 	s32 Destroy();
 	virtual void OnSocketTick(KNetSocket&, s64 now_ms) override;
 	virtual void OnSocketReadable(KNetSocket&, s64 now_ms) override;

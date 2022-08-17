@@ -33,12 +33,13 @@ struct KNetAddress
         sockaddr_in in4;
         sockaddr in;
     } real_addr_;
-    char debug_string[KNET_READABLE_ADDR_LEN];
+    char debug_string_[KNET_READABLE_ADDR_LEN];
+    const char* debug_string() const { return debug_string_; }
 
     KNetAddress()
     {
         real_addr_.in.sa_family = AF_UNSPEC;
-        debug_string[0] = '\0';
+        debug_string_[0] = '\0';
     }
 
     s32 family() const { return real_addr_.in.sa_family; }
@@ -190,10 +191,10 @@ struct KNetAddress
 
     void format_v4()
     {
-        debug_string[0] = '\0';
-        if (inet_ntop(family(), &real_addr_.in4.sin_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
+        debug_string_[0] = '\0';
+        if (inet_ntop(family(), &real_addr_.in4.sin_addr, debug_string_, KNET_READABLE_ADDR_LEN - 1) != NULL)
         {
-            char* p = &debug_string[0];
+            char* p = &debug_string_[0];
             while (*p != '\0')
             {
                 p++;
@@ -205,10 +206,10 @@ struct KNetAddress
 
     void format_v6()
     {
-        debug_string[0] = '\0';
-        if (inet_ntop(family(), &real_addr_.in6.sin6_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
+        debug_string_[0] = '\0';
+        if (inet_ntop(family(), &real_addr_.in6.sin6_addr, debug_string_, KNET_READABLE_ADDR_LEN - 1) != NULL)
         {
-            char* p = &debug_string[0];
+            char* p = &debug_string_[0];
             while (*p != '\0')
             {
                 p++;

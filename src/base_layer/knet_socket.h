@@ -88,9 +88,34 @@ public:
         
         local_.reset_from_socket(socket_);
         state_ = KNTS_BINDED;
-        LogInfo() << "bind local:" << local_.debug_string;
+        LogInfo() << "bind local:" << local_.debug_string();
         return 0;
     }
+
+    /* // 
+    s32 Connect()
+    {
+        if (state_ != KNTS_BINDED)
+        {
+            return -1;
+        }
+        s32 ret = connect(socket_, remote_.sockaddr_ptr(), remote_.sockaddr_len());
+        if (ret != 0)
+        {
+            return -2;
+        }
+        state_ = KNTS_CONNECTED;
+        return 0;
+    }
+    */
+
+
+    s32 SendTo()
+    {
+        sendto(socket_, "ssss", 4, 0, remote_.sockaddr_ptr(), remote_.sockaddr_len());
+        return 0;
+    }
+
 
 
     s32 DestroySocket()
