@@ -23,7 +23,7 @@
 #include "knet_base.h"
 #include <chrono>
 
-#include "knet_addr.h"
+#include "knet_address.h"
 #include "knet_env.h"
 
 
@@ -49,19 +49,74 @@ public:
     }
     ~KNetSocket()
     {
-
+        
     }
     
-    s32 InitLocal()
+    s32 InitSocket(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port)
+    {
+        if (state_ != KNTS_INVALID)
+        {
+            return -1;
+        }
+        s32 ret = local_.reset(localhost, localport);
+        ret |= remote_.reset(remote_ip, remote_port);
+        if (ret != 0)
+        {
+            return -2;
+        }
+        socket_ = socket(local_.family(), SOCK_DGRAM, 0);
+        if (socket_ == INVALID_SOCKET)
+        {
+            return -3;
+        }
+        state_ = KNTS_LOCAL_INITED;
+        ret = bind(socket_, local_.sockaddr_ptr(), local_.sockaddr_len());
+        if (ret != 0)
+        {
+            DestroySocket();
+            return -4;
+        }
+        
+        local_.reset_from_socket(socket_);
+        state_ = KNTS_BINDED;
+        LogInfo() << "bind local:" << local_.debug_string;
+        return 0;
+    }
 
 
+    s32 DestroySocket()
+    {
+        if (state_ == KNTS_INVALID)
+        {
+            return -1;
+        }
+        if (socket_ != INVALID_SOCKET)
+        {
+#ifdef _WIN32
+            closesocket(socket_);
+#else
+            close(socket_);
+#endif
+            socket_ = INVALID_SOCKET;
+        }
+        state_ = KNTS_INVALID;
+        return 0;
+    }
 
+    
+public:
+    KNTS_STATE state() { return state_; }
+    SOCKET skt() { return socket_; }
+    KNetAddress& local() { return local_; }
+    KNetAddress& remote() { return remote_; }
 private:
     KNTS_STATE state_;
     SOCKET socket_;
     KNetAddress local_;
     KNetAddress remote_;
 };
+
+
 
 
 

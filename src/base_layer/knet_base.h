@@ -88,7 +88,9 @@ const int INVALID_SOCKET = -1;
 
 
 
-
+const static u32 KNET_MAX_SOCKETS = 100;
+class KNetSocket;
+using KNetSockets = zlist<KNetSocket, KNET_MAX_SOCKETS>;
 
 
 

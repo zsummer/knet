@@ -168,7 +168,7 @@ namespace zsummer
         return !(n1 == n2);
     }
 
-    //È«¾²Ì¬Ë«ÏòÁ´±í  
+    //å…¨é™æ€åŒå‘é“¾è¡¨  
     template<class _Ty, size_t _Size>
     class zlist
     {

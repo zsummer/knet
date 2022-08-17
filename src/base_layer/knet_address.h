@@ -42,7 +42,7 @@ struct KNetAddress
     }
 
     s32 family() const { return real_addr_.in.sa_family; }
-    s32 port() const { return family() == AF_INET6 ? ntohs(real_addr_.in6.sin6_port) : ntohs(real_addr_.in4.sin_port); }
+    u16 port() const { return family() == AF_INET6 ? ntohs(real_addr_.in6.sin6_port) : ntohs(real_addr_.in4.sin_port); }
     s32 sockaddr_len() const { return family() == AF_INET6 ? sizeof(real_addr_.in6) : sizeof(real_addr_.in4); }
 
 
@@ -119,7 +119,7 @@ struct KNetAddress
         return result;
     }
 
-    void clean_socket_addr()
+    void clean_address()
     {
         memset(&real_addr_, 0, sizeof(real_addr_));
     }
@@ -142,55 +142,51 @@ struct KNetAddress
         }
         return 0;
     }
-
-    s32 reset(const char * ip,  u32 port)
+    s32 reset_port_v4(u16 port)
     {
-        u32 family = check_family(ip);
-        if (addr.sa_family == AF_INET)
-        {
-            real_addr_.in = addr;
-        }
-        else if (addr.sa_family == AF_INET6)
-        {
-            real_addr_.in6 = *(sockaddr_in6*)&addr;
-        }
-        format();
-        //other not support 
+        real_addr_.in4.sin_port = htons((u16)port);
+        return 0;
+    }
+    s32 reset_port_v6(u16 port)
+    {
+        real_addr_.in6.sin6_port = htons((u16)port);
         return 0;
     }
 
 
-
-
-    void format()
+    s32 reset(const char * ip, u16 port)
     {
-        debug_string[0] = '\0';
-        if (family() == AF_INET)
+        u32 family = check_family(ip);
+        if (family == AF_UNSPEC)
         {
-            if (inet_ntop(family(), &real_addr_.in4.sin_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
-            {
-                char* p = &debug_string[0];
-                while (p != '\0')
-                {
-                    p++;
-                }
-                sprintf(p, ":%d", ntohs(real_addr_.in4.sin_port));
-            }
-
+            return -1;
         }
-        else if(family() == AF_INET6)
+        clean_address();
+        if (family == AF_INET)
         {
-            if (inet_ntop(family(), &real_addr_.in6.sin6_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
-            {
-                char* p = &debug_string[0];
-                while (p != '\0')
-                {
-                    p++;
-                }
-                sprintf(p, ":%d", ntohs(real_addr_.in6.sin6_port));
-            }
+            real_addr_.in4.sin_family = family;
+            reset_ip_v4(ip);
+            reset_port_v4(port);
+            format_v4();
         }
+        else if (family == AF_INET6)
+        {
+            real_addr_.in6.sin6_family = family;
+            reset_ip_v6(ip);
+            reset_port_v6(port);
+            format_v6();
+        }
+        return 0;
     }
+
+    s32 reset_from_socket(SOCKET s)
+    {
+        int len = sizeof(real_addr_);
+        int ret = getsockname(s, &real_addr_.in, &len);
+        format();
+        return ret;
+    }
+
 
     void format_v4()
     {
@@ -198,7 +194,7 @@ struct KNetAddress
         if (inet_ntop(family(), &real_addr_.in4.sin_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
         {
             char* p = &debug_string[0];
-            while (p != '\0')
+            while (*p != '\0')
             {
                 p++;
             }
@@ -213,7 +209,7 @@ struct KNetAddress
         if (inet_ntop(family(), &real_addr_.in6.sin6_addr, debug_string, KNET_READABLE_ADDR_LEN - 1) != NULL)
         {
             char* p = &debug_string[0];
-            while (p != '\0')
+            while (*p != '\0')
             {
                 p++;
             }
