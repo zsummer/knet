@@ -116,6 +116,7 @@ s32 KNetController::StartServer(const KNetConfigs& configs)
 		}
 		LogInfo() << "init " << c.localhost << ":" << c.localport << " success";
 		iter->set_state(KNTS_ESTABLISHED);
+		iter->ref_count()++;
 	}
 
 	if (has_error)

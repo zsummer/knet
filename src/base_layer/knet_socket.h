@@ -46,6 +46,7 @@ public:
     {
         socket_ = INVALID_SOCKET;
         state_ = KNTS_INVALID;
+        ref_count_ = 0;
     }
     ~KNetSocket()
     {
@@ -144,7 +145,10 @@ public:
     SOCKET skt() { return socket_; }
     KNetAddress& local() { return local_; }
     KNetAddress& remote() { return remote_; }
+    s32 ref_count()const { return ref_count_; }
+    s32 & ref_count() { return ref_count_; }
 private:
+    s32 ref_count_;
     KNTS_STATE state_;
     SOCKET socket_;
     KNetAddress local_;
