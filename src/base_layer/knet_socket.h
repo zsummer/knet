@@ -27,7 +27,7 @@
 #include "knet_env.h"
 
 
-enum KNTS_STATE: u32
+enum KNTS_STATE: u16
 {
     KNTS_INVALID = 0,
     KNTS_LOCAL_INITED,
@@ -39,6 +39,15 @@ enum KNTS_STATE: u32
     KNTS_LINGER,
 };
 
+enum KNTS_FLAGS : u16
+{
+    KNTS_NONE = 0,
+    KNTS_SERVER = 0x1,
+    KNTS_CLINET =0x2,
+};
+
+
+
 class KNetSocket
 {
 public:
@@ -46,6 +55,7 @@ public:
     {
         socket_ = INVALID_SOCKET;
         state_ = KNTS_INVALID;
+        flag_ = KNTS_NONE;
         ref_count_ = 0;
     }
     ~KNetSocket()
@@ -123,8 +133,29 @@ public:
     {
         if (state_ == KNTS_INVALID)
         {
+            KNetEnv::Errors()++;
             return -1;
         }
+
+        if (ref_count_ > 0 && !(flag_ & KNTS_SERVER))
+        {
+            KNetEnv::Errors()++;
+            return -2;
+        }
+
+        if (ref_count_ > 1 && (flag_ & KNTS_SERVER))
+        {
+            KNetEnv::Errors()++;
+            return -3;
+        }
+
+        if (ref_count_  < 0)
+        {
+            KNetEnv::Errors()++;
+            return -4;
+        }
+
+
         if (socket_ != INVALID_SOCKET)
         {
 #ifdef _WIN32
@@ -134,27 +165,35 @@ public:
 #endif
             socket_ = INVALID_SOCKET;
         }
+
+
         state_ = KNTS_INVALID;
+        flag_ = KNTS_NONE;
+        
+        ref_count_ = 0;
         return 0;
     }
 
     
 public:
-    KNTS_STATE state() { return state_; }
-    KNTS_STATE set_state(KNTS_STATE s) { state_ = s; return state_; }
+    u16 state() { return state_; }
+    u16 set_state(u16 s) { state_ = s; return state_; }
     SOCKET skt() { return socket_; }
     KNetAddress& local() { return local_; }
     KNetAddress& remote() { return remote_; }
     s32 ref_count()const { return ref_count_; }
     s32 & ref_count() { return ref_count_; }
+    u16 & flag() { return flag_; }
+
+
 private:
     s32 ref_count_;
-    KNTS_STATE state_;
+    u16 state_;
+    u16 flag_;
     SOCKET socket_;
     KNetAddress local_;
     KNetAddress remote_;
 };
-
 
 
 

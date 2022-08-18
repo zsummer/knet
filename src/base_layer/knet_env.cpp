@@ -16,44 +16,19 @@
 * limitations under the License.
 */
 
-#pragma once
-#ifndef _KNET_SESSION_H_
-#define _KNET_SESSION_H_
-#include "knet_base.h"
-#include <chrono>
+
 #include "knet_env.h"
-#include "knet_select.h"
-#include "knet_socket.h"
 
 
-class KNetSession
+s32& KNetEnv::Errors()
 {
-public:
-	KNetSession();
-	~KNetSession();
-
-private:
-	zarray<std::pair<KNetSocket*, sockaddr_in6>, 5> slots;
-};
-
-KNetSession::KNetSession()
-{
-
+    static s32 global_errors_ = 0;
+    return global_errors_;
 }
 
 
 
 
-KNetSession::~KNetSession()
-{
-
-}
-
-
-
-
-
-#endif
 
 
 

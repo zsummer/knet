@@ -19,6 +19,9 @@
 #include "knet_controller.h"
 #include "knet_socket.h"
 
+
+
+
 KNetController::KNetController()
 {
 
@@ -56,6 +59,9 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 
 s32 KNetController::Destroy()
 {
+	//clean session
+
+	//clean sockets
 	for (auto& s : nss_)
 	{
 		s.DestroySocket();
@@ -71,21 +77,28 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
 	u32 has_error = 0;
 	for (auto& c : configs)
 	{
-		auto iter = nss_.emplace_back();
-		s32 ret = iter->InitSocket(c.localhost.c_str(), c.localport, c.remote_ip.c_str(), c.remote_port);
+		KNetSocket* ns = PopFreeSocket();
+		if (ns == NULL)
+		{
+			KNetEnv::Errors()++;
+			continue;
+		}
+
+		s32 ret = ns->InitSocket(c.localhost.c_str(), c.localport, c.remote_ip.c_str(), c.remote_port);
 		if (ret != 0)
 		{
 			LogError() << "init " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port << " has error";
 			has_error ++;
+			KNetEnv::Errors()++;
 			continue;
 		}
 
-		LogInfo() << "init " << iter->local().debug_string() << " --> " << iter->remote().debug_string() << " success";
-		iter->set_state(KNTS_HANDSHAKE_CH);
-		ret = iter->SendTo();
+		LogInfo() << "init " << ns->local().debug_string() << " --> " << ns->remote().debug_string() << " success";
+		ns->set_state(KNTS_HANDSHAKE_CH);
+		ret = ns->SendTo();
 		if (ret != 0)
 		{
-			LogError() << "SendTo " << iter->local().debug_string() << " --> " << iter->remote().debug_string() << " has error";
+			LogError() << "SendTo " << ns->local().debug_string() << " --> " << ns->remote().debug_string() << " has error";
 			has_error++;
 			continue;
 		}	
@@ -106,17 +119,26 @@ s32 KNetController::StartServer(const KNetConfigs& configs)
 	bool has_error = false;
 	for (auto& c : configs)
 	{
-		auto iter = nss_.emplace_back();
-		s32 ret = iter->InitSocket(c.localhost.c_str(), c.localport, NULL, 0);
+		KNetSocket* ns = PopFreeSocket();
+		if (ns == NULL)
+		{
+			KNetEnv::Errors()++;
+			continue;
+		}
+
+		s32 ret = ns->InitSocket(c.localhost.c_str(), c.localport, NULL, 0);
 		if (ret != 0)
 		{
 			LogError() << "init " << c.localhost << ":" << c.localport << " has error";
 			has_error = true;
+			KNetEnv::Errors()++;
 			break;
 		}
+
 		LogInfo() << "init " << c.localhost << ":" << c.localport << " success";
-		iter->set_state(KNTS_ESTABLISHED);
-		iter->ref_count()++;
+		ns->set_state(KNTS_ESTABLISHED);
+		ns->ref_count()++;
+		ns->flag() |= KNTS_SERVER;
 	}
 
 	if (has_error)
@@ -133,3 +155,44 @@ s32 KNetController::DoSelect()
 {
 	return Select(nss_, 0);
 }
+
+
+KNetSocket* KNetController::PopFreeSocket()
+{
+	for (auto& s : nss_)
+	{
+		if (s.state() == KNTS_INVALID)
+		{
+			return &s;
+		}
+	}
+	if (nss_.full())
+	{
+		return NULL;
+	}
+	nss_.emplace_back();
+	return &nss_.back();
+}
+
+
+void KNetController::PushFreeSocket(KNetSocket* s)
+{
+	if (s->state() == KNTS_INVALID)
+	{
+		return;
+	}
+	s->DestroySocket();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

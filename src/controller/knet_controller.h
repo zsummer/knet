@@ -46,6 +46,11 @@ public:
 	s32 Destroy();
 	virtual void OnSocketTick(KNetSocket&, s64 now_ms) override;
 	virtual void OnSocketReadable(KNetSocket&, s64 now_ms) override;
+
+
+public:
+	KNetSocket* PopFreeSocket();
+	void PushFreeSocket(KNetSocket*);
 private:
 	KNetSockets nss_;
 };

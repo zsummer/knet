@@ -21,7 +21,8 @@
 #include "knet_env.h"
 #include "knet_socket.h"
 
-
+static const u32 knet_fixed_size_ = sizeof(KNetSocket);
+static const u32 knet_array_fixed_size_ = sizeof(KNetSockets);
 
 s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 {
@@ -43,6 +44,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 		}
 		if (s.skt() == INVALID_SOCKET)
 		{
+			KNetEnv::Errors()++;
 			LogError() << "error";
 			continue;
 		}
@@ -63,6 +65,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 		{
 			return 0;
 		}
+		KNetEnv::Errors()++;
 		LogError() << " error";
 		return -2;
 	}
@@ -75,6 +78,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 		}
 		if (s.skt() == INVALID_SOCKET)
 		{
+			KNetEnv::Errors()++;
 			LogError() << "error";
 			continue;
 		}

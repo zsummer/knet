@@ -24,7 +24,9 @@
 #include "knet_env.h"
 
 
-using SocketEvent = void(*)(KNetSocket&, s64 now_ms);
+const static u32 KNET_MAX_SOCKETS = 100;
+class KNetSocket;
+using KNetSockets = zarray<KNetSocket, KNET_MAX_SOCKETS>;
 
 class KNetSelect
 {
