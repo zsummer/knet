@@ -57,29 +57,37 @@ public:
         state_ = KNTS_INVALID;
         flag_ = KNTS_NONE;
         ref_count_ = 0;
+        index_ = -1;
     }
     ~KNetSocket()
     {
-        
+        if (state_ != KNTS_INVALID || socket_ != INVALID_SOCKET)
+        {
+            KNetEnv::Errors()++;
+        }
     }
     
     s32 InitSocket(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port)
     {
-        if (state_ != KNTS_INVALID)
+        if (index_ < 0)
         {
             return -1;
+        }
+        if (state_ != KNTS_INVALID)
+        {
+            return -2;
         }
         s32 ret = local_.reset(localhost, localport);
         if (ret != 0)
         {
-            return -2;
+            return -3;
         }
         if (remote_ip != NULL)
         {
             ret = remote_.reset(remote_ip, remote_port);
             if (ret != 0)
             {
-                return -3;
+                return -4;
             }
         }
 
@@ -87,14 +95,14 @@ public:
         socket_ = socket(local_.family(), SOCK_DGRAM, 0);
         if (socket_ == INVALID_SOCKET)
         {
-            return -4;
+            return -5;
         }
         state_ = KNTS_LOCAL_INITED;
         ret = bind(socket_, local_.sockaddr_ptr(), local_.sockaddr_len());
         if (ret != 0)
         {
             DestroySocket();
-            return -5;
+            return -6;
         }
         
         local_.reset_from_socket(socket_);
@@ -176,6 +184,7 @@ public:
 
     
 public:
+    s32& index() { return index_; }
     u16 state() { return state_; }
     u16 set_state(u16 s) { state_ = s; return state_; }
     SOCKET skt() { return socket_; }
@@ -187,6 +196,7 @@ public:
 
 
 private:
+    s32 index_;
     s32 ref_count_;
     u16 state_;
     u16 flag_;

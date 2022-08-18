@@ -29,8 +29,13 @@ struct KNetConfig
 {
 	std::string localhost;
 	u16 localport;
+
 	std::string remote_ip;
 	u16 remote_port;
+
+	std::string physical_token;
+	u64 session_id;
+	std::string encrypt_key;
 };
 
 class KNetController: public KNetSelect

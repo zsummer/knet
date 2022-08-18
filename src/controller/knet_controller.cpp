@@ -159,18 +159,22 @@ s32 KNetController::DoSelect()
 
 KNetSocket* KNetController::PopFreeSocket()
 {
-	for (auto& s : nss_)
+	for (u32 i = 0; i < nss_.size(); i++)
 	{
+		KNetSocket& s = nss_[i];
 		if (s.state() == KNTS_INVALID)
 		{
+			s.index() = (s32)i;
 			return &s;
 		}
 	}
+
 	if (nss_.full())
 	{
 		return NULL;
 	}
 	nss_.emplace_back();
+	nss_.back().index() = (s32)nss_.size() - 1;
 	return &nss_.back();
 }
 
