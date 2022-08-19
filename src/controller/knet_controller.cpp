@@ -32,27 +32,37 @@ KNetController::~KNetController()
 
 }
 
-void KNetController::OnSocketTick(KNetSocket&, s64 now_ms)
+void KNetController::OnSocketTick(KNetSocket&s, s64 now_ms)
 {
-
+	if (s.state_ == KNTS_INVALID)
+	{
+		return;
+	}
+	if (s.refs_ == 0)
+	{
+		LogDebug() << s;
+		//s.DestroySocket();
+		return;
+	}
 }
 
 void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 {
+	LogDebug() << s;
 	char buf[100];
 	int len = 100;
 	sockaddr_in6 in6;
 	int addr_len = sizeof(in6);
-	int ret = recvfrom(s.skt(), buf, 100, 0, (sockaddr*)&in6, &addr_len);
+	int ret = recvfrom(s.skt_, buf, 100, 0, (sockaddr*)&in6, &addr_len);
 	if (ret < 0)
 	{
-		LogError() << "error";
+		LogError() << "error:" << KNetEnv::GetLastError();
 		return;
 	}
 	buf[ret] = '\0';
 	LogDebug() << "recv from:" << buf;
 	s.SendTo();
-	sendto(s.skt(), "result", 6, 0, (sockaddr*)&in6, addr_len);
+	sendto(s.skt_, "result", 6, 0, (sockaddr*)&in6, addr_len);
 }
 
 
@@ -72,9 +82,17 @@ s32 KNetController::Destroy()
 
 
 
-s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
+s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs, s32&session_id)
 {
 	u32 has_error = 0;
+	session_id = -1;
+	if (sessions_.full())
+	{
+		KNetEnv::Errors()++;
+		return -1;
+	}
+
+
 	for (auto& c : configs)
 	{
 		KNetSocket* ns = PopFreeSocket();
@@ -93,12 +111,20 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
 			continue;
 		}
 
-		LogInfo() << "init " << ns->local().debug_string() << " --> " << ns->remote().debug_string() << " success";
-		ns->set_state(KNTS_HANDSHAKE_CH);
+		LogInfo() << "init " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " success";
+		ns->state_ = KNTS_BINDED;
+		if (session_id == -1)
+		{
+
+		}
+
+
+		ns->state_ = KNTS_HANDSHAKE_CH;
+
 		ret = ns->SendTo();
 		if (ret != 0)
 		{
-			LogError() << "SendTo " << ns->local().debug_string() << " --> " << ns->remote().debug_string() << " has error";
+			LogError() << "SendTo " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " has error";
 			has_error++;
 			continue;
 		}	
@@ -136,9 +162,9 @@ s32 KNetController::StartServer(const KNetConfigs& configs)
 		}
 
 		LogInfo() << "init " << c.localhost << ":" << c.localport << " success";
-		ns->set_state(KNTS_ESTABLISHED);
-		ns->ref_count()++;
-		ns->flag() |= KNTS_SERVER;
+		ns->state_ = KNTS_ESTABLISHED;
+		ns->refs_++;
+		ns->flag_ |= KNTS_SERVER;
 	}
 
 	if (has_error)
@@ -162,9 +188,8 @@ KNetSocket* KNetController::PopFreeSocket()
 	for (u32 i = 0; i < nss_.size(); i++)
 	{
 		KNetSocket& s = nss_[i];
-		if (s.state() == KNTS_INVALID)
+		if (s.state_ == KNTS_INVALID)
 		{
-			s.index() = (s32)i;
 			return &s;
 		}
 	}
@@ -173,15 +198,14 @@ KNetSocket* KNetController::PopFreeSocket()
 	{
 		return NULL;
 	}
-	nss_.emplace_back();
-	nss_.back().index() = (s32)nss_.size() - 1;
+	nss_.emplace_back(nss_.size());
 	return &nss_.back();
 }
 
 
 void KNetController::PushFreeSocket(KNetSocket* s)
 {
-	if (s->state() == KNTS_INVALID)
+	if (s->state_ == KNTS_INVALID)
 	{
 		return;
 	}

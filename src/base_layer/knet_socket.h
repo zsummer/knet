@@ -46,33 +46,35 @@ enum KNTS_FLAGS : u16
     KNTS_CLINET =0x2,
 };
 
-
+class KNetSocket;
+FNLog::LogStream& operator <<(FNLog::LogStream&, const KNetSocket&);
 
 class KNetSocket
 {
 public:
-    KNetSocket()
+    friend class KNetSession;
+    friend class KNetController;
+    friend class KNetSelect;
+    KNetSocket(s32 skt_id)
     {
-        socket_ = INVALID_SOCKET;
+        skt_ = INVALID_SOCKET;
         state_ = KNTS_INVALID;
         flag_ = KNTS_NONE;
-        ref_count_ = 0;
-        index_ = -1;
+        skt_id_ = skt_id;
+        refs_ = 0;
+        LogDebug() <<  *this;
     }
     ~KNetSocket()
     {
-        if (state_ != KNTS_INVALID || socket_ != INVALID_SOCKET)
+        if (state_ != KNTS_INVALID || skt_ != INVALID_SOCKET)
         {
             KNetEnv::Errors()++;
         }
+        LogDebug() << *this;
     }
     
     s32 InitSocket(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port)
     {
-        if (index_ < 0)
-        {
-            return -1;
-        }
         if (state_ != KNTS_INVALID)
         {
             return -2;
@@ -92,22 +94,23 @@ public:
         }
 
 
-        socket_ = socket(local_.family(), SOCK_DGRAM, 0);
-        if (socket_ == INVALID_SOCKET)
+        skt_ = socket(local_.family(), SOCK_DGRAM, 0);
+        if (skt_ == INVALID_SOCKET)
         {
             return -5;
         }
         state_ = KNTS_LOCAL_INITED;
-        ret = bind(socket_, local_.sockaddr_ptr(), local_.sockaddr_len());
+        ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());
         if (ret != 0)
         {
             DestroySocket();
             return -6;
         }
         
-        local_.reset_from_socket(socket_);
+        local_.reset_from_socket(skt_);
         state_ = KNTS_BINDED;
         LogInfo() << "bind local:" << local_.debug_string();
+        LogInfo() << *this;
         return 0;
     }
 
@@ -118,7 +121,7 @@ public:
         {
             return -1;
         }
-        s32 ret = connect(socket_, remote_.sockaddr_ptr(), remote_.sockaddr_len());
+        s32 ret = connect(skt_, remote_.sockaddr_ptr(), remote_.sockaddr_len());
         if (ret != 0)
         {
             return -2;
@@ -131,7 +134,7 @@ public:
 
     s32 SendTo()
     {
-        sendto(socket_, "ssss", 4, 0, remote_.sockaddr_ptr(), remote_.sockaddr_len());
+        sendto(skt_, "ssss", 4, 0, remote_.sockaddr_ptr(), remote_.sockaddr_len());
         return 0;
     }
 
@@ -145,68 +148,74 @@ public:
             return -1;
         }
 
-        if (ref_count_ > 0 && !(flag_ & KNTS_SERVER))
+        if (refs_ > 0 && !(flag_ & KNTS_SERVER))
         {
             KNetEnv::Errors()++;
             return -2;
         }
 
-        if (ref_count_ > 1 && (flag_ & KNTS_SERVER))
+        if (refs_ > 1 && (flag_ & KNTS_SERVER))
         {
             KNetEnv::Errors()++;
             return -3;
         }
 
-        if (ref_count_  < 0)
+        if (refs_  < 0)
         {
             KNetEnv::Errors()++;
             return -4;
         }
 
+        LogInfo() << *this;
 
-        if (socket_ != INVALID_SOCKET)
+        if (skt_ != INVALID_SOCKET)
         {
 #ifdef _WIN32
-            closesocket(socket_);
+            closesocket(skt_);
 #else
-            close(socket_);
+            close(skt_);
 #endif
-            socket_ = INVALID_SOCKET;
+            skt_ = INVALID_SOCKET;
         }
 
 
         state_ = KNTS_INVALID;
         flag_ = KNTS_NONE;
         
-        ref_count_ = 0;
+        refs_ = 0;
         return 0;
     }
 
     
+
+
 public:
-    s32& index() { return index_; }
-    u16 state() { return state_; }
-    u16 set_state(u16 s) { state_ = s; return state_; }
-    SOCKET skt() { return socket_; }
-    KNetAddress& local() { return local_; }
-    KNetAddress& remote() { return remote_; }
-    s32 ref_count()const { return ref_count_; }
-    s32 & ref_count() { return ref_count_; }
-    u16 & flag() { return flag_; }
-
-
-private:
-    s32 index_;
-    s32 ref_count_;
+    s32 skt_id_;
+    s32 refs_;
     u16 state_;
     u16 flag_;
-    SOCKET socket_;
+    SOCKET skt_;
     KNetAddress local_;
     KNetAddress remote_;
 };
 
 
-
+inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s)
+{
+    if (s.flag_ & KNTS_SERVER)
+    {
+        ls << "server: skt_id:" << s.skt_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ <<", refs:" << s.refs_ << ", local:" << s.local_.debug_string() ;
+    }
+    else if (s.flag_ & KNTS_CLINET)
+    {
+        ls << "client: skt_id:" << s.skt_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
+    }
+    else
+    {
+        ls << "none: skt_id:" << s.skt_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
+    }
+    return ls;
+}
 
 
 #endif   

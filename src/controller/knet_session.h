@@ -33,21 +33,10 @@ public:
 	~KNetSession();
 
 private:
-	zarray<std::pair<KNetSocket*, sockaddr_in6>, 5> slots;
+
 };
 
-KNetSession::KNetSession()
-{
 
-}
-
-
-
-
-KNetSession::~KNetSession()
-{
-
-}
 
 
 

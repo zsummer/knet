@@ -18,6 +18,17 @@
 
 #include "knet_session.h"
 
+KNetSession::KNetSession()
+{
 
+}
+
+
+
+
+KNetSession::~KNetSession()
+{
+
+}
 
 

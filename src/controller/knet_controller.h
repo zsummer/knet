@@ -24,6 +24,8 @@
 #include "knet_env.h"
 #include "knet_select.h"
 #include "knet_socket.h"
+#include "knet_session.h"
+#include "zpool.h"
 
 struct KNetConfig
 {
@@ -38,6 +40,17 @@ struct KNetConfig
 	std::string encrypt_key;
 };
 
+
+#ifndef KNET_MAX_SESSIONS
+#define KNET_MAX_SESSIONS 1000
+#endif // KNET_MAX_SESSIONS
+static_assert(KNET_MAX_SESSIONS >= 10, "");
+
+class KNetSession;
+using KNetSessions = zlist<KNetSession, KNET_MAX_SESSIONS>;
+
+
+
 class KNetController: public KNetSelect
 {
 public:
@@ -46,7 +59,7 @@ public:
 	KNetController();
 	~KNetController();
 	s32 StartServer(const KNetConfigs& configs);
-	s32 StartConnect(std::string uuid, const KNetConfigs& configs);
+	s32 StartConnect(std::string uuid, const KNetConfigs& configs, s32 & session_id);
 	s32 DoSelect();
 	s32 Destroy();
 	virtual void OnSocketTick(KNetSocket&, s64 now_ms) override;
@@ -58,6 +71,9 @@ public:
 	void PushFreeSocket(KNetSocket*);
 private:
 	KNetSockets nss_;
+	KNetSessions sessions_;
+	std::unordered_map<std::string, KNetSession*> handshakes_;
+	std::unordered_map<u64, KNetSession*> establisheds_;
 };
 
 
