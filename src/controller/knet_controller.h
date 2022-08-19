@@ -27,22 +27,10 @@
 #include "knet_session.h"
 #include "zpool.h"
 
-struct KNetConfig
-{
-	std::string localhost;
-	u16 localport;
-
-	std::string remote_ip;
-	u16 remote_port;
-
-	std::string physical_token;
-	u64 session_id;
-	std::string encrypt_key;
-};
 
 
 #ifndef KNET_MAX_SESSIONS
-#define KNET_MAX_SESSIONS 1000
+#define KNET_MAX_SESSIONS 10
 #endif // KNET_MAX_SESSIONS
 static_assert(KNET_MAX_SESSIONS >= 10, "");
 
@@ -54,24 +42,27 @@ using KNetSessions = zlist<KNetSession, KNET_MAX_SESSIONS>;
 class KNetController: public KNetSelect
 {
 public:
-	static const u32 MAX_SESSION_CONFIGS = 2*3*2;
-	using KNetConfigs = zarray<KNetConfig, MAX_SESSION_CONFIGS>;
+
 	KNetController();
 	~KNetController();
 	s32 StartServer(const KNetConfigs& configs);
-	s32 StartConnect(std::string uuid, const KNetConfigs& configs, s32 & session_id);
+	s32 StartConnect(std::string uuid, const KNetConfigs& configs);
+	s32 RemoveSession(std::string uuid, u64 session_id);
+
 	s32 DoSelect();
 	s32 Destroy();
 	virtual void OnSocketTick(KNetSocket&, s64 now_ms) override;
 	virtual void OnSocketReadable(KNetSocket&, s64 now_ms) override;
-
+private:
+	s32 RemoveSession(KNetSession* session);
 
 public:
 	KNetSocket* PopFreeSocket();
 	void PushFreeSocket(KNetSocket*);
 private:
+	u32 controller_state_;
 	KNetSockets nss_;
-	KNetSessions sessions_;
+	//KNetSessions sessions_;
 	std::unordered_map<std::string, KNetSession*> handshakes_;
 	std::unordered_map<u64, KNetSession*> establisheds_;
 };

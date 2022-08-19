@@ -30,7 +30,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 	tv.tv_sec = 0;
 	tv.tv_usec = wait_ms * 1000;
 
-	s64 enter_now_ms = KNetEnv::GetNowMS();
+	s64 enter_now_ms = KNetEnv::Now();
 
 	fd_set rdfds;
 	FD_ZERO(&rdfds);
@@ -69,7 +69,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 		LogError() << " error";
 		return -2;
 	}
-	s64 post_now_ms = KNetEnv::GetNowMS();
+	s64 post_now_ms = KNetEnv::Now();
 	for (auto& s : sets)
 	{
 		if (s.state_ < KNTS_BINDED || s.state_ >= KNTS_LINGER)

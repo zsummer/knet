@@ -30,7 +30,7 @@ s32 test_socket_bind()
 
 s32 test_socket_bind2()
 {
-	KNetController::KNetConfigs mc;
+	KNetConfigs mc;
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0});
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 	KNetController controller;
@@ -63,7 +63,7 @@ int main()
 	KNetAssert(test_socket_bind2() == 0, "");
 
 
-	KNetController::KNetConfigs mc;
+	KNetConfigs mc;
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 	KNetController controller;
@@ -73,8 +73,8 @@ int main()
 	mc.clear();
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
-	s32 sid;
-	ret = controller.StartConnect("ddddddddddd", mc, sid);
+
+	ret = controller.StartConnect("ddddddddddd", mc);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 100; i++)

@@ -24,7 +24,7 @@
 #include "knet_env.h"
 
 #ifndef KNET_MAX_SOCKETS
-#define KNET_MAX_SOCKETS 100
+#define KNET_MAX_SOCKETS 10
 #endif // KNET_MAX_SOCKETS
 
 static_assert(KNET_MAX_SOCKETS >= 10, "");

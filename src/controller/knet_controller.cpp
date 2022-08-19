@@ -24,7 +24,7 @@
 
 KNetController::KNetController()
 {
-
+	controller_state_ = 0;
 }
 
 KNetController::~KNetController()
@@ -59,6 +59,7 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 		LogError() << "error:" << KNetEnv::GetLastError();
 		return;
 	}
+	s.last_active_ = now_ms;
 	buf[ret] = '\0';
 	LogDebug() << "recv from:" << buf;
 	s.SendTo();
@@ -70,6 +71,14 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 s32 KNetController::Destroy()
 {
 	//clean session
+	while (!handshakes_.empty())
+	{
+		RemoveSession(handshakes_.begin()->second->uuid_, 0);
+	}
+	while (!establisheds_.empty())
+	{
+		RemoveSession("", establisheds_.begin()->second->session_id_);
+	}
 
 	//clean sockets
 	for (auto& s : nss_)
@@ -82,14 +91,14 @@ s32 KNetController::Destroy()
 
 
 
-s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs, s32&session_id)
+s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
 {
 	u32 has_error = 0;
-	session_id = -1;
-	if (sessions_.full())
+	KNetSession* session = NULL;
+	//if (sessions_.full())
 	{
-		KNetEnv::Errors()++;
-		return -1;
+		//KNetEnv::Errors()++;
+		//return -1;
 	}
 
 
@@ -113,14 +122,18 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs, s
 
 		LogInfo() << "init " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " success";
 		ns->state_ = KNTS_BINDED;
-		if (session_id == -1)
+		if (session == NULL)
 		{
-
+			session = new KNetSession();
+			session->uuid_ = uuid;
 		}
-
-
+		KNetSocketSlot addr;
+		addr.skt_id_ = ns->skt_id_;
+		addr.last_active_ = KNetEnv::Now();
+		addr.remote_ = ns->remote_;
+		session->slots_.push_back(addr);
 		ns->state_ = KNTS_HANDSHAKE_CH;
-
+		ns->refs_++;
 		ret = ns->SendTo();
 		if (ret != 0)
 		{
@@ -129,16 +142,75 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs, s
 			continue;
 		}	
 	}
-	
-	if (has_error < configs.size())
+	if (has_error == configs.size())
 	{
-		return 0;
+		RemoveSession(session);
+		return -1;
 	}
-	return -1;
+	handshakes_.insert(std::make_pair(uuid, session));
+
+
+	return 0;
+}
+
+s32 KNetController::RemoveSession(std::string uuid, u64 session_id)
+{
+	KNetSession* session = NULL;
+	if (true)
+	{
+		auto iter = handshakes_.find(uuid);
+		if (iter != handshakes_.end())
+		{
+			session = iter->second;
+			handshakes_.erase(iter);
+		}
+	}
+	if (true)
+	{
+		auto iter = establisheds_.find(session_id);
+		if (iter != establisheds_.end())
+		{
+			if (session != NULL)
+			{
+				KNetEnv::Errors()++;
+			}
+			session = iter->second;
+			establisheds_.erase(iter);
+		}
+	}
+	return RemoveSession(session);
 }
 
 
-
+s32 KNetController::RemoveSession(KNetSession* session)
+{
+	if (session == NULL)
+	{
+		return 0;
+	}
+	for (auto s: session->slots_)
+	{
+		if (s.skt_id_ < 0 || s.skt_id_ >= nss_.size())
+		{
+			KNetEnv::Errors()++;
+			continue;
+		}
+		KNetSocket& skt = nss_[s.skt_id_];
+		if (skt.skt_id_ != s.skt_id_)
+		{
+			KNetEnv::Errors()++;
+			continue;
+		}
+		if (skt.refs_ <= 0)
+		{
+			KNetEnv::Errors()++;
+			continue;
+		}
+		skt.refs_--;
+	}
+	delete session;
+	return 0;
+}
 
 s32 KNetController::StartServer(const KNetConfigs& configs)
 {

@@ -62,7 +62,7 @@ public:
 #endif
 	}
 
-	static s64 GetNowMS()
+	static s64 Now()
 	{
 		return  std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}

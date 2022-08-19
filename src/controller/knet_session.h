@@ -25,15 +25,42 @@
 #include "knet_select.h"
 #include "knet_socket.h"
 
+struct KNetConfig
+{
+	std::string localhost;
+	u16 localport;
+
+	std::string remote_ip;
+	u16 remote_port;
+
+	std::string physical_token;
+	u64 session_id;
+	std::string encrypt_key;
+};
+
+
+static const u32 MAX_SESSION_CONFIGS = 2 * 3 * 2;
+using KNetConfigs = zarray<KNetConfig, MAX_SESSION_CONFIGS>;
+
+
+struct KNetSocketSlot
+{
+	s32 skt_id_;
+	KNetAddress remote_;
+	s64 last_active_;
+};
 
 class KNetSession
 {
 public:
 	KNetSession();
 	~KNetSession();
-
-private:
-
+	s32 Destroy();
+public:
+	std::string uuid_;
+	u64 session_id_;
+	KNetConfigs configs_;
+	std::vector<KNetSocketSlot> slots_;
 };
 
 

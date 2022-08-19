@@ -62,6 +62,7 @@ public:
         flag_ = KNTS_NONE;
         skt_id_ = skt_id;
         refs_ = 0;
+        last_active_ = KNetEnv::Now();
         LogDebug() <<  *this;
     }
     ~KNetSocket()
@@ -93,7 +94,7 @@ public:
             }
         }
 
-
+        last_active_ = KNetEnv::Now();
         skt_ = socket(local_.family(), SOCK_DGRAM, 0);
         if (skt_ == INVALID_SOCKET)
         {
@@ -181,8 +182,8 @@ public:
 
         state_ = KNTS_INVALID;
         flag_ = KNTS_NONE;
-        
         refs_ = 0;
+        last_active_ = KNetEnv::Now();
         return 0;
     }
 
@@ -197,6 +198,8 @@ public:
     SOCKET skt_;
     KNetAddress local_;
     KNetAddress remote_;
+ public:
+     s64 last_active_;
 };
 
 
