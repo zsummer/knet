@@ -103,7 +103,7 @@ public:
         {
             return -5;
         }
-        KNetEnv::Status(KNT_STT_SKT_INIT_EVENTS);
+        KNetEnv::Status(KNT_STT_SKT_INIT_EVENTS)++;
         state_ = KNTS_LOCAL_INITED;
         ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());
         if (ret != 0)
@@ -114,7 +114,7 @@ public:
         
         local_.reset_from_socket(skt_);
         state_ = KNTS_BINDED;
-        KNetEnv::Status(KNT_STT_SKT_BIND_EVENTS);
+        KNetEnv::Status(KNT_STT_SKT_BIND_EVENTS)++;
         LogInfo() << "bind local:" << local_.debug_string();
         LogInfo() << *this;
         return 0;
@@ -140,7 +140,7 @@ public:
 
     s32 SendTo()
     {
-        KNetEnv::Status(KNT_STT_SKT_SND_EVENTS);
+        KNetEnv::Status(KNT_STT_SKT_SND_EVENTS)++;
         sendto(skt_, "ssss", 4, 0, remote_.sockaddr_ptr(), remote_.sockaddr_len());
         return 0;
     }
@@ -172,7 +172,7 @@ public:
             KNetEnv::Errors()++;
             return -4;
         }
-        KNetEnv::Status(KNT_STT_SKT_DESTROY_EVENTS);
+        KNetEnv::Status(KNT_STT_SKT_DESTROY_EVENTS)++;
         LogInfo() << *this;
 
         if (skt_ != INVALID_SOCKET)
