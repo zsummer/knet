@@ -62,6 +62,9 @@ int main()
 	KNetAssert(test_socket_bind() == 0, "");
 	KNetAssert(test_socket_bind2() == 0, "");
 
+	KNetEnv::CleanStatus();
+	KNetEnv::Errors() = 0;
+
 
 	KNetConfigs mc;
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
@@ -88,6 +91,15 @@ int main()
 	}
 
 	controller.Destroy();
+	for (size_t i = 0; i < 10; i++)
+	{
+		ret = controller.DoSelect();
+		if (ret != 0)
+		{
+			LogError() << "select error";
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::Errors() == 0, "");
 	return 0;

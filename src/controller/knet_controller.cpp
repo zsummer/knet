@@ -59,11 +59,13 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 		LogError() << "error:" << KNetEnv::GetLastError();
 		return;
 	}
+	KNetEnv::Status(KNT_STT_SKT_RCV_EVENTS);
 	s.last_active_ = now_ms;
 	buf[ret] = '\0';
 	LogDebug() << "recv from:" << buf;
 	s.SendTo();
 	sendto(s.skt_, "result", 6, 0, (sockaddr*)&in6, addr_len);
+	KNetEnv::Status(KNT_STT_SKT_SND_EVENTS);
 }
 
 
@@ -124,6 +126,7 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
 		ns->state_ = KNTS_BINDED;
 		if (session == NULL)
 		{
+			KNetEnv::Status(KNT_STT_SES_CREATE_EVENTS);
 			session = new KNetSession();
 			session->uuid_ = uuid;
 		}
@@ -188,6 +191,7 @@ s32 KNetController::RemoveSession(KNetSession* session)
 	{
 		return 0;
 	}
+	
 	for (auto s: session->slots_)
 	{
 		if (s.skt_id_ < 0 || s.skt_id_ >= nss_.size())
@@ -208,6 +212,7 @@ s32 KNetController::RemoveSession(KNetSession* session)
 		}
 		skt.refs_--;
 	}
+	KNetEnv::Status(KNT_STT_SES_DESTROY_EVENTS);
 	delete session;
 	return 0;
 }
@@ -262,6 +267,7 @@ KNetSocket* KNetController::PopFreeSocket()
 		KNetSocket& s = nss_[i];
 		if (s.state_ == KNTS_INVALID)
 		{
+			KNetEnv::Status(KNT_STT_SKT_ALLOC_EVENTS);
 			return &s;
 		}
 	}
@@ -271,6 +277,7 @@ KNetSocket* KNetController::PopFreeSocket()
 		return NULL;
 	}
 	nss_.emplace_back(nss_.size());
+	KNetEnv::Status(KNT_STT_SKT_ALLOC_EVENTS);
 	return &nss_.back();
 }
 
@@ -281,7 +288,9 @@ void KNetController::PushFreeSocket(KNetSocket* s)
 	{
 		return;
 	}
+	KNetEnv::Status(KNT_STT_SKT_FREE_EVENTS);
 	s->DestroySocket();
+
 }
 
 

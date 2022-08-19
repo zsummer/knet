@@ -26,7 +26,17 @@ s32& KNetEnv::Errors()
     return global_errors_;
 }
 
+s64 g_knet_status[KNT_STT_MAX] = { 0 };
 
+s64& KNetEnv::Status(KNET_STATUS id)
+{
+    return g_knet_status[id];
+}
+
+void KNetEnv::CleanStatus()
+{
+    memset(g_knet_status, 0, sizeof(g_knet_status));
+}
 
 
 
