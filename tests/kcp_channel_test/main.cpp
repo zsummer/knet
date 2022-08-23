@@ -77,7 +77,7 @@ int main()
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
 
-	ret = controller.StartConnect("ddddddddddd", mc);
+	ret = controller.StartConnect(KNetHelper::CreateKey(), mc);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 100; i++)

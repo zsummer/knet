@@ -38,7 +38,11 @@ void KNetEnv::CleanStatus()
     memset(g_knet_status, 0, sizeof(g_knet_status));
 }
 
-
+u32 KNetEnv::CreateSequenceID()
+{
+    static u64 seq_id = 0;
+    return ++seq_id;
+}
 
 
 

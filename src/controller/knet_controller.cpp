@@ -18,7 +18,7 @@
 
 #include "knet_controller.h"
 #include "knet_socket.h"
-
+#include "knet_rudp.h"
 
 
 
@@ -49,54 +49,68 @@ void KNetController::OnSocketTick(KNetSocket&s, s64 now_ms)
 void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 {
 	LogDebug() << s;
-	char buf[100];
-	int len = 100;
-	sockaddr_in6 in6;
-	int addr_len = sizeof(in6);
-	int ret = recvfrom(s.skt_, buf, 100, 0, (sockaddr*)&in6, &addr_len);
-	if (ret < 0)
+	char buf[KNT_UDATA_SIZE];
+	int len = KNT_UDATA_SIZE;
+	KNetAddress remote;
+	s32 ret = s.RecvFrom(buf, len, remote, now_ms);
+	if (ret != 0)
 	{
-		LogError() << "error:" << KNetEnv::GetLastError();
+		return ;
+	}
+
+	if (len < KNT_UHDR_SIZE)
+	{
 		return;
 	}
-	KNetEnv::Status(KNT_STT_SKT_RCV_EVENTS)++;
-	s.last_active_ = now_ms;
-	buf[ret] = '\0';
-	LogDebug() << "recv from:" << buf;
-	s.SendTo();
-	sendto(s.skt_, "result", 6, 0, (sockaddr*)&in6, addr_len);
-	KNetEnv::Status(KNT_STT_SKT_SND_EVENTS)++;
+	KNetUHDR uhdr;
+	const char* p = buf;
+	p = KNetDecodeUHDR(p, uhdr);
+	u64 umac = KNetHSMac(p, p - buf, uhdr);
+	if (umac != uhdr.mac)
+	{
+		LogDebug() << "umac error. real:" << (void*)umac << ", hdr umac:" << (void*)uhdr.mac;
+		return;
+	}
+	if (uhdr.pkt_size != len)
+	{
+		LogDebug() << "pkt size error. real:" << len << ", hdr pkt_size:" << uhdr.pkt_size;
+		return;
+	}
+
+	if (buf[len - 1] != '\0')
+	{
+		LogDebug() << "test error.";
+		return;
+	}
+	LogDebug() << "PSH:" << p;
+	uhdr.pkt_id++;
+	uhdr.mac = KNetHSMac(p, p-buf, uhdr);
+	KNetEncodeUHDR(buf, uhdr);
+	s.SendTo(buf, len, remote);
+	
 }
 
 
 
 s32 KNetController::Destroy()
 {
-	//clean session
-	while (!handshakes_.empty())
-	{
-		RemoveSession(handshakes_.begin()->second->uuid_, 0);
-	}
-	while (!establisheds_.empty())
-	{
-		RemoveSession("", establisheds_.begin()->second->session_id_);
-	}
+	CleanSession();
 
-	//clean sockets
-	for (auto& s : nss_)
-	{
-		s.DestroySocket();
-	}
-	nss_.clear();
 	return 0;
 }
 
 
 
-s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
+s32 KNetController::StartConnect(KNetHandshakeKey hkey, const KNetConfigs& configs)
 {
 	u32 has_error = 0;
 	KNetSession* session = NULL;
+	if (!KNetHelper::CheckKey(hkey))
+	{
+		KNetEnv::Errors()++;
+		return -1;
+	}
+
 	//if (sessions_.full())
 	{
 		//KNetEnv::Errors()++;
@@ -128,7 +142,7 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
 		{
 			KNetEnv::Status(KNT_STT_SES_CREATE_EVENTS)++;
 			session = new KNetSession();
-			session->uuid_ = uuid;
+			session->hkey_ = hkey;
 		}
 		KNetSocketSlot addr;
 		addr.skt_id_ = ns->skt_id_;
@@ -137,7 +151,17 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
 		session->slots_.push_back(addr);
 		ns->state_ = KNTS_HANDSHAKE_CH;
 		ns->refs_++;
-		ret = ns->SendTo();
+
+		char	buf[1000];
+		s32 len = 0;
+		KNetUHDR uhdr;
+		memset(&uhdr, 0, sizeof(uhdr));
+		strcpy(buf + KNT_UHDR_SIZE, "abcde");
+		uhdr.pkt_size = KNT_UHDR_SIZE + 6;
+		uhdr.mac = KNetHSMac(buf + KNT_UHDR_SIZE, 6, uhdr);
+		KNetEncodeUHDR(buf, uhdr);
+
+		ret = ns->SendTo(buf, KNT_UHDR_SIZE + 6, addr.remote_);
 		if (ret != 0)
 		{
 			LogError() << "SendTo " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " has error";
@@ -150,18 +174,41 @@ s32 KNetController::StartConnect(std::string uuid, const KNetConfigs& configs)
 		RemoveSession(session);
 		return -1;
 	}
-	handshakes_.insert(std::make_pair(uuid, session));
+	handshakes_.insert(std::make_pair(hkey, session));
 
 
 	return 0;
 }
 
-s32 KNetController::RemoveSession(std::string uuid, u64 session_id)
+
+s32 KNetController::CleanSession()
+{
+	//clean session
+	while (!handshakes_.empty())
+	{
+		RemoveSession(handshakes_.begin()->second->hkey_, 0);
+	}
+
+	while (!establisheds_.empty())
+	{
+		RemoveSession(establisheds_.begin()->second->hkey_, establisheds_.begin()->second->session_id_);
+	}
+	for (auto& s : nss_)
+	{
+		s.DestroySocket();
+	}
+	nss_.clear();
+	return 0;
+}
+
+
+
+s32 KNetController::RemoveSession(KNetHandshakeKey hkey, u64 session_id)
 {
 	KNetSession* session = NULL;
 	if (true)
 	{
-		auto iter = handshakes_.find(uuid);
+		auto iter = handshakes_.find(hkey);
 		if (iter != handshakes_.end())
 		{
 			session = iter->second;
@@ -194,7 +241,7 @@ s32 KNetController::RemoveSession(KNetSession* session)
 	
 	for (auto s: session->slots_)
 	{
-		if (s.skt_id_ < 0 || s.skt_id_ >= nss_.size())
+		if (s.skt_id_ < 0 || s.skt_id_ >= (u32)nss_.size())
 		{
 			KNetEnv::Errors()++;
 			continue;

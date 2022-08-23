@@ -28,7 +28,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 {
 	struct timeval tv;
 	tv.tv_sec = 0;
-	tv.tv_usec = wait_ms * 1000;
+	tv.tv_usec = (int)wait_ms * 1000;
 
 	s64 enter_now_ms = KNetEnv::Now();
 

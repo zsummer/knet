@@ -22,6 +22,7 @@
 #include "knet_base.h"
 #include <chrono>
 #include "knet_env.h"
+#include "knet_helper.h"
 #include "knet_select.h"
 #include "knet_socket.h"
 #include "knet_session.h"
@@ -46,8 +47,9 @@ public:
 	KNetController();
 	~KNetController();
 	s32 StartServer(const KNetConfigs& configs);
-	s32 StartConnect(std::string uuid, const KNetConfigs& configs);
-	s32 RemoveSession(std::string uuid, u64 session_id);
+	s32 StartConnect(KNetHandshakeKey hkey, const KNetConfigs& configs);
+	s32 RemoveSession(KNetHandshakeKey hkey, u64 session_id);
+	s32 CleanSession();
 
 	s32 DoSelect();
 	s32 Destroy();
@@ -63,7 +65,7 @@ private:
 	u32 controller_state_;
 	KNetSockets nss_;
 	//KNetSessions sessions_;
-	std::unordered_map<std::string, KNetSession*> handshakes_;
+	std::unordered_map<KNetHandshakeKey, KNetSession*, KNetHandshakeKey::Hash> handshakes_;
 	std::unordered_map<u64, KNetSession*> establisheds_;
 };
 

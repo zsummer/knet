@@ -138,13 +138,34 @@ public:
     */
 
 
-    s32 SendTo()
+    s32 SendTo(const char* buf,  s32 len, KNetAddress& remote)
     {
         KNetEnv::Status(KNT_STT_SKT_SND_EVENTS)++;
-        sendto(skt_, "ssss", 4, 0, remote_.sockaddr_ptr(), remote_.sockaddr_len());
+        KNetEnv::Status(KNT_STT_SKT_SND_BYTES)+= len;
+        s32 ret = sendto(skt_, buf, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
+        if (ret == SOCKET_ERROR)
+        {
+            return -1;
+        }
         return 0;
     }
 
+    s32 RecvFrom(char* buf,  s32& len, KNetAddress& remote, s64 now_ms)
+    {
+        int addr_len = sizeof(remote.real_addr_.in6);
+        int ret = recvfrom(skt_, buf, len, 0, (sockaddr*)&remote.real_addr_.in6, &addr_len);
+        if (ret <= 0)
+        {
+            len = 0;
+            LogError() << "error:" << KNetEnv::GetLastError();
+            return -1;
+        }
+        len = ret;
+        KNetEnv::Status(KNT_STT_SKT_RCV_EVENTS)++;
+        KNetEnv::Status(KNT_STT_SKT_RCV_BYTES)+= ret;
+        last_active_ = now_ms;
+        return 0;
+    }
 
 
     s32 DestroySocket()

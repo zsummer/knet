@@ -107,6 +107,9 @@ public:
 	static s64& Status(KNET_STATUS id);
 	static void CleanStatus();
 
+
+	static u32 CreateSequenceID();
+
 };
 
 
