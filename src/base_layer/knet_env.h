@@ -109,6 +109,8 @@ public:
 
 
 	static u32 CreateSequenceID();
+	static u64 CreatePKGID();
+	static u64 CreateSessionID();
 
 };
 
