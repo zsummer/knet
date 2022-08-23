@@ -84,9 +84,10 @@ struct KNetUHDR
 	u64 pkt_id;
 	u16 pkt_size;
 	u16 version;
-	u8 channel_id;
+	u8 chl;
 	u8 cmd;
-	u16 flag;
+	u8 flag;
+	u8 slot;
 	u64 mac;
 };
 static const u32 KNT_UHDR_SIZE = 8 * 4;
@@ -99,9 +100,10 @@ static inline char* KNetEncodeUHDR(char* p, const KNetUHDR& hdr)
 	p = ikcp_encode64u(p, hdr.pkt_id);
 	p = ikcp_encode16u(p, hdr.pkt_size);
 	p = ikcp_encode16u(p, hdr.version);
-	p = ikcp_encode8u(p, hdr.channel_id);
+	p = ikcp_encode8u(p, hdr.chl);
 	p = ikcp_encode8u(p, hdr.cmd);
-	p = ikcp_encode16u(p, hdr.flag);
+	p = ikcp_encode8u(p, hdr.flag);
+	p = ikcp_encode8u(p, hdr.slot);
 	p = ikcp_encode64u(p, hdr.mac);
 	return p;
 }
@@ -112,9 +114,10 @@ static inline const char* KNetDecodeUHDR(const char* p, KNetUHDR& hdr)
 	p = ikcp_decode64u(p, &hdr.pkt_id);
 	p = ikcp_decode16u(p, &hdr.pkt_size);
 	p = ikcp_decode16u(p, &hdr.version);
-	p = ikcp_decode8u(p, &hdr.channel_id);
+	p = ikcp_decode8u(p, &hdr.chl);
 	p = ikcp_decode8u(p, &hdr.cmd);
-	p = ikcp_decode16u(p, &hdr.flag);
+	p = ikcp_decode8u(p, &hdr.flag);
+	p = ikcp_decode8u(p, &hdr.slot);
 	p = ikcp_decode64u(p, &hdr.mac);
 	return p;
 }
@@ -128,11 +131,13 @@ static inline u64 KNetHSMac(const char* data, s32 len,  KNetUHDR& hdr)
 	mac ^= h;
 	mac *= kPrime;
 	mac ^= hdr.pkt_id;
-	mac ^= hdr.pkt_size;
-	mac ^= hdr.version;
-	mac ^= hdr.channel_id;
-	mac ^= hdr.cmd;
-	mac ^= hdr.flag;
+	mac *= kPrime;
+	mac ^= (u64)hdr.pkt_size << 48;
+	mac ^= (u64)hdr.version << 32;
+	mac ^= (u64)hdr.chl << 24;
+	mac ^= (u64)hdr.cmd << 16;
+	mac ^= (u64)hdr.flag << 8;
+	mac *= kPrime;
 
 	const unsigned char* p = (const unsigned char*)data;
 	const unsigned char* pend = (const unsigned char*)data + len;
@@ -143,6 +148,7 @@ static inline u64 KNetHSMac(const char* data, s32 len,  KNetUHDR& hdr)
 		i = i % 8;
 		*(d+i) ^= *p++;
 	}
+	mac *= kPrime;
 	return mac;
 }
 

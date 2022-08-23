@@ -40,7 +40,7 @@ void KNetEnv::CleanStatus()
 
 u32 KNetEnv::CreateSequenceID()
 {
-    static u64 seq_id = 0;
+    static u32 seq_id = 0;
     return ++seq_id;
 }
 
