@@ -74,7 +74,7 @@ enum KNetCMD
 	KNETCMD_SH = 2,
 	KNETCMD_PSH = 3,
 	KNETCMD_RST = 4,
-	KNETCMD_ECHO = 4,
+	KNETCMD_ECHO = 5,
 };
 
 
@@ -123,7 +123,7 @@ static inline const char* KNetDecodeUHDR(const char* p, KNetUHDR& hdr)
 }
 
 
-static inline u64 KNetHSMac(const char* data, s32 len,  KNetUHDR& hdr)
+static inline u64 KNetCTLMac(const char* data, s32 len,  KNetUHDR& hdr)
 {
 	u64 mac = hdr.session_id;
 	static const u64 h = (0x84222325ULL << 32) | 0xcbf29ce4ULL;
@@ -153,14 +153,34 @@ static inline u64 KNetHSMac(const char* data, s32 len,  KNetUHDR& hdr)
 }
 
 
-static inline u64 KNetPSMac(const char* data, s32 len, const char* box, KNetUHDR& hdr)
+static inline u64 KNetPSHMac(const char* data, s32 len, const char* box, KNetUHDR& hdr)
 {
 	(void)box;
-	return KNetHSMac(data, len, hdr);
+	return KNetCTLMac(data, len, hdr);
 }
 
 
 
+
+struct KNetPKGCH
+{
+	u64 ch_mac;
+	KNetHandshakeKey key;
+	u64 session_id;
+	char cg[16];
+	char cp[16];
+	KNetDeviceInfo dvi;
+};
+
+struct KNetPKGSH
+{
+	s32 result;
+	u64 sh_mac;
+	KNetHandshakeKey key;
+	u64 session_id;
+	char sg[16];
+	char sp[16];
+};
 
 
 

@@ -59,6 +59,7 @@ public:
     {
         KNetEnv::Status(KNT_STT_SKT_INSTRUCT_EVENTS)++;
         skt_ = INVALID_SOCKET;
+        slot_id_ = 0;
         state_ = KNTS_INVALID;
         flag_ = KNTS_NONE;
         skt_id_ = skt_id;
@@ -138,11 +139,11 @@ public:
     */
 
 
-    s32 SendTo(const char* buf,  s32 len, KNetAddress& remote)
+    s32 SendTo(const char* pkg_data,  s32 len, KNetAddress& remote)
     {
         KNetEnv::Status(KNT_STT_SKT_SND_EVENTS)++;
         KNetEnv::Status(KNT_STT_SKT_SND_BYTES)+= len;
-        s32 ret = sendto(skt_, buf, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
+        s32 ret = sendto(skt_, pkg_data, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
         if (ret == SOCKET_ERROR)
         {
             return -1;
@@ -219,6 +220,7 @@ public:
 
 public:
     s32 skt_id_;
+    u8  slot_id_;
     s32 refs_;
     u16 state_;
     u16 flag_;

@@ -26,14 +26,12 @@
 
 struct KNetDeviceInfo
 {
-    std::string device_name;
-    std::string device_type;
-    std::string device_mac;
-    std::string sys_name;
-    std::string sys_version;
-    std::string os_name;
-
-
+   char device_name[128];
+   char device_type[128];
+   char device_mac[128];
+   char sys_name[128];
+   char sys_version[128];
+   char os_name[128];
 };
 
 struct KNetHandshakeKey
@@ -42,7 +40,6 @@ struct KNetHandshakeKey
     u32 sequence_code;
     u32 mac_code;
     u32 rand_code;
-    u32 mac_key;
 
     struct Hash
     {
@@ -93,18 +90,16 @@ public:
     static KNetHandshakeKey CreateKey()
     {
         KNetDeviceInfo kdi;
+        memset(&kdi, 0, sizeof(kdi));
         return CreateKey(kdi);
     }
     static KNetHandshakeKey CreateKey(const KNetDeviceInfo& kdi)
     {
         KNetHandshakeKey key;
         key.system_time = KNetEnv::Now();
-        key.mac_code = (u32)(kdi.device_name.length() + kdi.device_mac.length() + kdi.device_type.length() + kdi.sys_name.length() + kdi.sys_version.length() + kdi.os_name.length());
+        key.mac_code = (u32)(kdi.device_name[0] + kdi.device_mac[0] + kdi.device_type[0] + kdi.sys_name[0] + kdi.sys_version[0] + kdi.os_name[0]);
         key.rand_code = (u32)rand();
         key.sequence_code = KNetEnv::CreateSequenceID();
-        u64 mac = (u64)key.system_time + key.mac_code + key.rand_code + key.sequence_code;
-        mac &= 0xffffffff;
-        key.mac_key = (u32)mac;
         return key;
     }
 
@@ -116,12 +111,6 @@ public:
             return false;
         }
         if (key.sequence_code == 0)
-        {
-            return false;
-        }
-        u64 mac = (u64)key.system_time + key.mac_code + key.rand_code + key.sequence_code;
-        mac &= 0xffffffff;
-        if (mac != key.mac_key)
         {
             return false;
         }

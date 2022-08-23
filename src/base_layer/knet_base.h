@@ -87,7 +87,7 @@ const int INVALID_SOCKET = -1;
 
 
 
-#define KNT_UDATA_SIZE 1350
+#define KNT_UPKG_SIZE 1350
 
 
 
