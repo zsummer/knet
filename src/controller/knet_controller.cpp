@@ -57,14 +57,14 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 		return ;
 	}
 
-	if (len < KNT_UHDR_SIZE)
+	if (len < KNetUHDR::HDR_SIZE)
 	{
 		return;
 	}
 	KNetUHDR uhdr;
 	const char* p = pkg_rcv_;
 	p = KNetDecodeUHDR(p, uhdr);
-	if (!CheckUHDR(uhdr, p,  len - KNT_UHDR_SIZE))
+	if (!CheckUHDR(uhdr, p,  len - KNetUHDR::HDR_SIZE))
 	{
 		LogDebug() << "check uhdr error. ";
 		return;
@@ -81,7 +81,7 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 	case KNETCMD_RST:
 		break;
 	case KNETCMD_ECHO:
-		OnPKGEcho(s, uhdr, p, len - KNT_UHDR_SIZE, remote, now_ms);
+		OnPKGEcho(s, uhdr, p, len - KNetUHDR::HDR_SIZE, remote, now_ms);
 		break;
 	default:
 		break;
@@ -104,7 +104,7 @@ void KNetController::OnPKGEcho(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s3
 	hdr.pkt_id++;
 	hdr.mac = KNetCTLMac(pkg, len, hdr);
 	KNetEncodeUHDR(pkg_rcv_, hdr);
-	SendUPKG(s, pkg_rcv_, KNT_UHDR_SIZE + len, remote, now_ms);
+	SendUPKG(s, pkg_rcv_, KNetUHDR::HDR_SIZE + len, remote, now_ms);
 }
 
 s32 KNetController::Destroy()
@@ -177,7 +177,7 @@ s32 KNetController::StartConnect(KNetHandshakeKey hkey, const KNetConfigs& confi
 			has_error++;
 			continue;
 		}
-		ret = SendUPKG(*ns, pkg_snd_, KNT_UHDR_SIZE + 6, slot.remote_, 0);
+		ret = SendUPKG(*ns, pkg_snd_, KNetUHDR::HDR_SIZE + 6, slot.remote_, 0);
 		if (ret != 0)
 		{
 			LogError() << "SendTo " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " has error";
@@ -207,7 +207,7 @@ s32 KNetController::SendUPKG(KNetSocket& s, char* pkg_data, s32 len, KNetAddress
 
 s32 KNetController::MakeUPKG(u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len, s64 now_ms)
 {
-	if (len + KNT_UHDR_SIZE > KNT_UPKG_SIZE)
+	if (len + KNetUHDR::HDR_SIZE > KNT_UPKG_SIZE)
 	{
 		return -1;
 	}
@@ -215,7 +215,7 @@ s32 KNetController::MakeUPKG(u64 session_id, u64 pkt_id, u16 version, u8 chl, u8
 	KNetUHDR uhdr;
 	uhdr.session_id = session_id;
 	uhdr.pkt_id = pkt_id;
-	uhdr.pkt_size = KNT_UHDR_SIZE + len;
+	uhdr.pkt_size = KNetUHDR::HDR_SIZE + len;
 	uhdr.version = version;
 	uhdr.chl = chl;
 	uhdr.cmd = cmd;
@@ -241,7 +241,7 @@ s32 KNetController::MakeUPKG(u64 session_id, u64 pkt_id, u16 version, u8 chl, u8
 
 bool KNetController::CheckUHDR(KNetUHDR& hdr, const char* pkg, s32 len)
 {
-	if (hdr.pkt_size != KNT_UHDR_SIZE + len)
+	if (hdr.pkt_size != KNetUHDR::HDR_SIZE + len)
 	{
 		return false;
 	}

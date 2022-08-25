@@ -23,24 +23,50 @@
 #include <chrono>
 #include "knet_env.h"
 
+static inline bool ikcp_check_str(char* src, s32 src_len)
+{
+    for (s32 i = 0; i < src_len; i++)
+    {
+        if (src[i] == '\0')
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 
 struct KNetDeviceInfo
 {
+    static const u32 PKT_SIZE = 128 * 6;
    char device_name[128];
    char device_type[128];
    char device_mac[128];
    char sys_name[128];
    char sys_version[128];
    char os_name[128];
+   bool is_valid()
+   {
+       return ikcp_check_str(device_name, 128) 
+           && ikcp_check_str(device_type, 128) 
+           && ikcp_check_str(device_mac, 128) 
+           && ikcp_check_str(sys_name, 128) 
+           && ikcp_check_str(sys_version, 128) 
+           && ikcp_check_str(os_name, 128);
+   }
 };
+static_assert(sizeof(KNetDeviceInfo) == KNetDeviceInfo::PKT_SIZE, "");
+
 
 struct KNetHandshakeKey
 {
+    static const u32 PKT_SIZE = 8 + 4 + 4 + 8;
+    
     s64 system_time;
     u32 sequence_code;
-    u32 mac_code;
     u32 rand_code;
-
+    u64 mac_code;
     struct Hash
     {
         u64 operator()(const KNetHandshakeKey& key) const
@@ -55,6 +81,10 @@ struct KNetHandshakeKey
         }
     };
 };
+
+static_assert(sizeof(KNetHandshakeKey) == KNetHandshakeKey::PKT_SIZE, "");
+
+
 
 inline bool operator   <(const KNetHandshakeKey& key1, const KNetHandshakeKey& key2)
 {
