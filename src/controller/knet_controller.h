@@ -56,7 +56,16 @@ public:
 	s32 Destroy();
 	virtual void OnSocketTick(KNetSocket&, s64 now_ms) override;
 	virtual void OnSocketReadable(KNetSocket&, s64 now_ms) override;
-	void OnPKGEcho(KNetSocket&s, KNetUHDR&hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void OnPKGEcho(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+
+	void PKGCH(KNetSocket& s, KNetUHDR& hdr, KNetPKGCH& ch, KNetSession& session, s64 now_ms);
+	void PKGSH(KNetSocket& s, KNetUHDR& hdr, KNetPKGSH& sh, KNetSession& session, s64 now_ms);
+	void PKGPSH(KNetSocket& s, KNetUHDR& hdr, KNetPKGSH& sh, KNetSession& session, s64 now_ms);
+
+	void OnPKGCH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void OnPKGSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void OnPKGPSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+
 private:
 	s32 RemoveSession(KNetSession* session);
 	s32 SendUPKG(KNetSocket&, char* pkg_data, s32 len, KNetAddress& remote, s64 now_ms);

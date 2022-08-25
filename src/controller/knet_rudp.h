@@ -94,6 +94,7 @@ enum KNetCMD
 	KNETCMD_ECHO = 5,
 };
 
+const static u32 KNT_MAX_SLOTS = 8;
 
 struct KNetUHDR
 {
@@ -311,6 +312,18 @@ static inline const char* KNetDecodePKGSH(const char* p, KNetPKGSH& pkt)
 	p = ikcp_decode_str(p, pkt.sp, 16);
 	return p;
 }
+
+
+struct KNetPKGPSH
+{
+	static const u32 PKT_SIZE = 0;
+};
+static_assert(KNetPKGPSH::PKT_SIZE < KNT_UDAT_SIZE, "");
+
+
+
+
+
 
 
 

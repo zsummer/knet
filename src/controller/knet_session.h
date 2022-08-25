@@ -25,6 +25,7 @@
 #include "knet_helper.h"
 #include "knet_select.h"
 #include "knet_socket.h"
+#include "knet_rudp.h"
 
 struct KNetConfig
 {
@@ -34,18 +35,20 @@ struct KNetConfig
 	std::string remote_ip;
 	u16 remote_port;
 
-	std::string physical_token;
-	u64 session_id;
-	std::string encrypt_key;
+
 };
 
 
-static const u32 MAX_SESSION_CONFIGS = 2 * 3 * 2;
+static const u32 MAX_SESSION_CONFIGS = KNT_MAX_SLOTS;
 using KNetConfigs = zarray<KNetConfig, MAX_SESSION_CONFIGS>;
 
 
 struct KNetSocketSlot
 {
+	KNetSocketSlot()
+	{
+		skt_id_ = -1;
+	}
 	s32 skt_id_;
 	KNetAddress remote_;
 	s64 last_active_;
@@ -60,8 +63,12 @@ public:
 public:
 	KNetHandshakeKey hkey_;
 	u64 session_id_;
+	std::string physical_token;
+	std::string encrypt_key;
 	KNetConfigs configs_;
-	std::vector<KNetSocketSlot> slots_;
+	char sg_[16];
+	char sp_[16];
+	std::array<KNetSocketSlot, KNT_MAX_SLOTS> slots_;
 };
 
 
