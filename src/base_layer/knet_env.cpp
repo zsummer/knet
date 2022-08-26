@@ -44,7 +44,7 @@ u32 KNetEnv::CreateSequenceID()
     return ++seq_id;
 }
 
-u64 KNetEnv::CreatePKGID()
+u64 KNetEnv::CreatePKTID()
 {
     static u64 pkg_id = 0;
     return ++pkg_id;

@@ -60,7 +60,7 @@ int main()
 	FNLog::FastStartDebugLogger();
 	LogInfo() << "start up";
 	KNetAssert(test_socket_bind() == 0, "");
-	KNetAssert(test_socket_bind2() == 0, "");
+	//KNetAssert(test_socket_bind2() == 0, "");
 
 	KNetEnv::CleanStatus();
 	KNetEnv::Errors() = 0;

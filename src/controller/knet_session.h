@@ -63,6 +63,7 @@ public:
 public:
 	KNetHandshakeKey hkey_;
 	u64 session_id_;
+	u64 pkt_id_;
 	std::string physical_token;
 	std::string encrypt_key;
 	KNetConfigs configs_;

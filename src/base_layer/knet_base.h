@@ -87,7 +87,7 @@ const int INVALID_SOCKET = -1;
 
 
 
-const static u32 KNT_UPKG_SIZE = 1350;
+const static u32 KNT_UPKT_SIZE = 1350;
 
 
 
