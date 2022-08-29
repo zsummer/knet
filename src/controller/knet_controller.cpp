@@ -72,13 +72,17 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 
 	switch (uhdr.cmd)
 	{
+	case KNETCMD_PB:
+		on_probe(s, uhdr, p, len - KNetUHDR::HDR_SIZE, remote, now_ms);
+		break;
 	case KNETCMD_CH:
-		OnPKTCH(s, uhdr, p, len - KNetUHDR::HDR_SIZE, remote, now_ms);
+		on_ch(s, uhdr, p, len - KNetUHDR::HDR_SIZE, remote, now_ms);
 		break;
 	case KNETCMD_SH:
-		OnPKTSH(s, uhdr, p, len - KNetUHDR::HDR_SIZE, remote, now_ms);
+		on_sh(s, uhdr, p, len - KNetUHDR::HDR_SIZE, remote, now_ms);
 		break;
 	case KNETCMD_PSH:
+		on_psh(s, uhdr, p, len - KNetUHDR::HDR_SIZE, remote, now_ms);
 		break;
 	case KNETCMD_RST:
 		break;
@@ -95,33 +99,7 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 	
 }
 
-void  KNetController::PKTCH(KNetSocket& s, KNetUHDR& hdr, KNetPKTCH& ch, KNetSession& session, s64 now_ms)
-{
-	ch.session_id = session.session_id_;
-	ch.key = session.hkey_;
-	memcpy(ch.cg, session.sg_, sizeof(session.sg_));
-	memcpy(ch.cp, session.sp_, sizeof(session.sp_));
-	memset(&ch.dvi, 0, sizeof(ch.dvi));
-	memset(ch.noise, 0, sizeof(ch.noise));
-}
 
-
-
-void  KNetController::PKTSH(KNetSocket& s, KNetUHDR& hdr, KNetPKTSH& sh, KNetSession& session, s64 now_ms)
-{
-	sh.key = session.hkey_;
-	sh.session_id = session.session_id_;
-	sh.result = 0;
-	sh.noise = 0;
-	memcpy(sh.sg, session.sg_, sizeof(session.sg_));
-	memcpy(sh.sp, session.sp_, sizeof(session.sp_));
-}
-
-
-void  KNetController::PKTPSH(KNetSocket& s, KNetUHDR& hdr, KNetPKTSH& sh, KNetSession& session, s64 now_ms)
-{
-
-}
 
 void KNetController::OnPKTEcho(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
@@ -138,35 +116,9 @@ void KNetController::OnPKTEcho(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s3
 }
 
 
-void KNetController::OnPKTSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
-{
-	LogDebug() << "recv sh";
-	if (len < KNetPKTSH::PKT_SIZE)
-	{
-		LogError() << "sh error";
-		return;
-	}
-	KNetPKTSH sh;
-	knet_decode_sh(pkg, sh);
-
-	auto iter = handshakes_c_.find(sh.key);
-	if (iter == handshakes_c_.end())
-	{
-		LogError() << "no this";
-		return;
-	}
-	s.state_ = KNTS_ESTABLISHED;
-	establisheds_c_[hdr.session_id] = iter->second;
-	LogInfo() << "client established sucess";
-}
 
 
 
-
-void KNetController::OnPKTPSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
-{
-
-}
 
 
 
@@ -490,11 +442,107 @@ s32 KNetController::send_sh(KNetSocket& s, const KNetPKTCH& ch, const KNetPKTSH&
 {
 	KNetUHDR hdr;
 	set_snd_data_offset(knet_encode_packet(snd_data(), sh));
-	make_hdr(hdr, 0, 0, 0, 0, KNETCMD_SH, 0);
+	make_hdr(hdr, sh.session_id, 0, 0, 0, KNETCMD_SH, 0);
 	write_hdr(hdr);
 	return send_packet(s, snd_head(), snd_len(), remote, KNetEnv::now_ms());
 }
 
+void KNetController::on_sh(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+{
+	LogDebug() << "recv sh";
+	if (len < KNetPKTSH::PKT_SIZE)
+	{
+		LogError() << "sh error";
+		return;
+	}
+	KNetPKTSH sh;
+	knet_decode_packet(pkg, sh);
+	if (s.client_session_inst_id_ < 0 || s.client_session_inst_id_ >= sessions_.size())
+	{
+		LogError() << "sh error";
+		return;
+	}
+	KNetSession& session = sessions_[s.client_session_inst_id_];
+	if (session.state_ != KNTS_HANDSHAKE_CH)
+	{
+		return;
+	}
+	session.state_ = KNTS_ESTABLISHED;
+	establisheds_c_[sh.session_id] = &session;
+	session.session_id_ = sh.session_id;
+	for (auto& slot: session.slots_)
+	{
+		if (slot.inst_id_  == -1 || slot.inst_id_ >= nss_.size())
+		{
+			continue;
+		}
+		nss_[slot.inst_id_].state_ = KNTS_ESTABLISHED;
+	}
+
+	LogInfo() << "client established sucess";
+
+}
+
+
+s32 KNetController::send_psh(KNetSession& s, char* psh_buf, s32 len)
+{
+	KNetUHDR hdr;
+	memcpy(snd_data(), psh_buf, len);
+	set_snd_data_offset(snd_data() + len);
+	make_hdr(hdr, s.session_id_, ++s.snd_pkt_id_, 0, 0, KNETCMD_PSH, 0);
+	write_hdr(hdr);
+	s32 send_cnt = 0;
+	for (auto& slot : s.slots_)
+	{
+		if (slot.inst_id_ == -1 || slot.inst_id_ >= nss_.size())
+		{
+			continue;
+		}
+		send_packet(nss_[slot.inst_id_], snd_head(), snd_len(), slot.remote_, KNetEnv::now_ms());
+		send_cnt++;
+	}
+	return send_cnt > 0;
+}
+
+
+
+
+void KNetController::on_psh(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+{
+	KNetSession* session = NULL;
+	if (s.is_server())
+	{
+		auto iter = establisheds_s_.find(hdr.session_id);
+		if (iter != establisheds_s_.end())
+		{
+			session = iter->second;
+		}
+	}
+	else
+	{
+		auto iter = establisheds_c_.find(hdr.session_id);
+		if (iter != establisheds_c_.end())
+		{
+			session = iter->second;
+		}
+	}
+	if (session == NULL)
+	{
+		LogError() << "on_psh error";
+		return;
+	}
+	if (hdr.slot < session->slots_.size())
+	{
+		session->slots_[hdr.slot].remote_ = remote;
+	}
+
+	on_psh(*session, hdr, pkg, len, remote, now_ms);
+}
+
+void KNetController::on_psh(KNetSession& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+{
+	LogDebug() << "session on psh";
+}
 
 
 
@@ -563,21 +611,17 @@ s32 KNetController::CleanSession()
 	//clean session
 	while (!handshakes_s_.empty())
 	{
-		RemoveSession(handshakes_s_.begin()->second->hkey_, 0);
-	}
-	while (!handshakes_c_.empty())
-	{
-		RemoveSession(handshakes_c_.begin()->second->hkey_, 0);
+		RemoveSession(handshakes_s_.begin()->second->shake_id_, 0);
 	}
 
 	while (!establisheds_c_.empty())
 	{
-		RemoveSession(establisheds_c_.begin()->second->hkey_, establisheds_c_.begin()->second->session_id_);
+		RemoveSession(establisheds_c_.begin()->second->shake_id_, establisheds_c_.begin()->second->session_id_);
 	}
 
 	while (!establisheds_s_.empty())
 	{
-		RemoveSession(establisheds_s_.begin()->second->hkey_, establisheds_s_.begin()->second->session_id_);
+		RemoveSession(establisheds_s_.begin()->second->shake_id_, establisheds_s_.begin()->second->session_id_);
 	}
 	for (auto& s : nss_)
 	{
@@ -589,21 +633,12 @@ s32 KNetController::CleanSession()
 
 
 
-s32 KNetController::RemoveSession(KNetShakeID hkey, u64 session_id)
+s32 KNetController::RemoveSession(u64 shake_id, u64 session_id)
 {
 	KNetSession* session = NULL;
 	if (true)
 	{
-		auto iter = handshakes_c_.find(hkey);
-		if (iter != handshakes_c_.end())
-		{
-			session = iter->second;
-			handshakes_c_.erase(iter);
-		}
-	}
-	if (true)
-	{
-		auto iter = handshakes_s_.find(hkey);
+		auto iter = handshakes_s_.find(shake_id);
 		if (iter != handshakes_s_.end())
 		{
 			session = iter->second;
@@ -674,7 +709,7 @@ s32 KNetController::destroy_session(KNetSession* session)
 	}
 	if (session->state_ == KNTS_INVALID)
 	{
-		return;
+		return 0;
 	}
 
 	for (auto s: session->slots_)

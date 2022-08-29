@@ -240,7 +240,7 @@ struct KNetProbe
 	u64 shake_id;
 	KNetDeviceInfo dvi;
 };
-static_assert(KNetProbe::PKT_SIZE < KNT_UDAT_SIZE&& KNetPKTCH::PKT_SIZE> 500, "");
+static_assert(KNetProbe::PKT_SIZE < KNT_UDAT_SIZE&& KNetProbe::PKT_SIZE> 500, "");
 static_assert(sizeof(KNetProbe) == KNetProbe::PKT_SIZE, "");
 
 
@@ -277,7 +277,7 @@ static inline char* knet_encode_packet(char* p, const KNetProbeAck& pkt)
 {
 	p = ikcp_encode64s(p, pkt.result);
 	p = ikcp_encode64s(p, pkt.client_ms);
-	p = ikcp_encode64u(p, pkt.client_seq_id);
+	p = ikcp_encode64s(p, pkt.client_seq_id);
 	p = ikcp_encode64u(p, pkt.shake_id);
 	return p;
 }
@@ -286,7 +286,7 @@ static inline const char* knet_decode_packet(const char* p, KNetProbeAck& pkt)
 {
 	p = ikcp_decode64s(p, &pkt.result);
 	p = ikcp_decode64s(p, &pkt.client_ms);
-	p = ikcp_decode64u(p, &pkt.client_seq_id);
+	p = ikcp_decode64s(p, &pkt.client_seq_id);
 	p = ikcp_decode64u(p, &pkt.shake_id);
 	return p;
 }

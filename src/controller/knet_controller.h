@@ -49,7 +49,7 @@ public:
 
 	
 	s32 StartConnect(const KNetConfigs& configs, s32& session_inst_id);
-	s32 RemoveSession(KNetShakeID hkey, u64 session_id);
+	s32 RemoveSession(u64 shake_id, u64 session_id);
 	s32 CleanSession();
 
 	s32 DoSelect();
@@ -58,12 +58,7 @@ public:
 	virtual void OnSocketReadable(KNetSocket&, s64 now_ms) override;
 	void OnPKTEcho(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
-	void PKTCH(KNetSocket& s, KNetUHDR& hdr, KNetPKTCH& ch, KNetSession& session, s64 now_ms);
-	void PKTSH(KNetSocket& s, KNetUHDR& hdr, KNetPKTSH& sh, KNetSession& session, s64 now_ms);
-	void PKTPSH(KNetSocket& s, KNetUHDR& hdr, KNetPKTSH& sh, KNetSession& session, s64 now_ms);
 
-	void OnPKTSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
-	void OnPKTPSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 public:
 	s32 send_probe(KNetSocket& s);
@@ -75,10 +70,11 @@ public:
 	void on_ch(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 	s32 send_sh(KNetSocket& s, const KNetPKTCH& ch, const KNetPKTSH& sh, KNetAddress& remote);
-
 	void on_sh(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
-
+	s32 send_psh(KNetSession& s, char* psh_buf, s32 len);
+	void on_psh(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_psh(KNetSession& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 private:
 
@@ -109,7 +105,6 @@ private:
 	char pkg_snd_[KNT_UPKT_SIZE];
 	s32 pkg_snd_offset_;
 	//KNetSessions sessions_;
-	std::unordered_map<u64, KNetSession*> handshakes_c_;
 	std::unordered_map<u64, KNetSession*> handshakes_s_;
 	std::unordered_map<u64, KNetSession*> establisheds_c_;
 	std::unordered_map<u64, KNetSession*> establisheds_s_;
