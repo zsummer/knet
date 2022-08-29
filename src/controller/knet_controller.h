@@ -22,7 +22,6 @@
 #include "knet_base.h"
 #include <chrono>
 #include "knet_env.h"
-#include "knet_helper.h"
 #include "knet_select.h"
 #include "knet_socket.h"
 #include "knet_session.h"
@@ -44,12 +43,13 @@ using KNetSessions = zlist<KNetSession, KNET_MAX_SESSIONS>;
 class KNetController: public KNetSelect
 {
 public:
-
 	KNetController();
 	~KNetController();
 	s32 StartServer(const KNetConfigs& configs);
-	s32 StartConnect(KNetHandshakeKey hkey, const KNetConfigs& configs);
-	s32 RemoveSession(KNetHandshakeKey hkey, u64 session_id);
+
+	
+	s32 StartConnect(KNetShakeID hkey, const KNetConfigs& configs);
+	s32 RemoveSession(KNetShakeID hkey, u64 session_id);
 	s32 CleanSession();
 
 	s32 DoSelect();
@@ -67,15 +67,16 @@ public:
 	void OnPKTPSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 private:
-	s32 RemoveSession(KNetSession* session);
+
+	KNetShakeID CreateShakeID();
+
+
 	s32 send_packet(KNetSocket&, char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	s32 destroy_session(KNetSession* session);
+	KNetSession* create_session();
+	KNetSocket* create_stream();
+	void destroy_stream(KNetSocket*);
 
-
-public:
-	KNetSocket* PopFreeSocket();
-	void PushFreeSocket(KNetSocket*);
-
-public:
 	s32 check_hdr(KNetUHDR& hdr, const char* data, s32 len);
 	s32 make_hdr(KNetUHDR& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len);
 	s32 make_hdr(KNetUHDR& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag) { return make_hdr(hdr, session_id, pkt_id, version, chl, cmd, flag, snd_data(), snd_data_len()); }
@@ -83,7 +84,6 @@ public:
 	void set_snd_data_offset(const char* p) { pkg_snd_offset_ = (s32)(p - pkg_snd_); }
 	s32 snd_data_len() { return pkg_snd_offset_ - KNT_UHDR_SIZE; }
 	s32 snd_len() { return pkg_snd_offset_; }
-
 	char* snd_head() { return pkg_snd_; }
 	char* snd_data() { return pkg_snd_ + KNT_UHDR_SIZE; }
 	char* rcv_head() { return pkg_rcv_; }
@@ -96,8 +96,8 @@ private:
 	char pkg_snd_[KNT_UPKT_SIZE];
 	s32 pkg_snd_offset_;
 	//KNetSessions sessions_;
-	std::unordered_map<KNetHandshakeKey, KNetSession*, KNetHandshakeKey::Hash> handshakes_c_;
-	std::unordered_map<KNetHandshakeKey, KNetSession*, KNetHandshakeKey::Hash> handshakes_s_;
+	std::unordered_map<KNetShakeID, KNetSession*, KNetShakeID::Hash> handshakes_c_;
+	std::unordered_map<KNetShakeID, KNetSession*, KNetShakeID::Hash> handshakes_s_;
 	std::unordered_map<u64, KNetSession*> establisheds_c_;
 	std::unordered_map<u64, KNetSession*> establisheds_s_;
 };

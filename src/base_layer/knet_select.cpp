@@ -30,7 +30,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 	tv.tv_sec = 0;
 	tv.tv_usec = (int)wait_ms * 1000;
 
-	s64 enter_now_ms = KNetEnv::Now();
+	s64 enter_now_ms = KNetEnv::now_ms();
 
 	fd_set rdfds;
 	FD_ZERO(&rdfds);
@@ -44,7 +44,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 		}
 		if (s.skt_ == INVALID_SOCKET)
 		{
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			LogError() << "error";
 			continue;
 		}
@@ -60,16 +60,16 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 	s32 ret = select(max_fd + 1, &rdfds, NULL, NULL, &tv);
 	if (ret < 0)
 	{
-		s32 error = KNetEnv::GetLastError();
+		s32 error = KNetEnv::error_code();
 		if (error == EINTR)
 		{
 			return 0;
 		}
-		KNetEnv::Errors()++;
+		KNetEnv::error_count()++;
 		LogError() << " error";
 		return -2;
 	}
-	s64 post_now_ms = KNetEnv::Now();
+	s64 post_now_ms = KNetEnv::now_ms();
 	for (auto& s : sets)
 	{
 		if (s.state_ < KNTS_BINDED || s.state_ >= KNTS_LINGER)
@@ -78,7 +78,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 		}
 		if (s.skt_ == INVALID_SOCKET)
 		{
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			LogError() << "error";
 			continue;
 		}

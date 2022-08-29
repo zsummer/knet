@@ -55,19 +55,52 @@ enum KNET_STATUS
 };
 
 
+struct KNetDeviceInfo
+{
+	static const u32 PKT_SIZE = 128 * 6;
+	char device_name[128];
+	char device_type[128];
+	char device_mac[128];
+	char sys_name[128];
+	char sys_version[128];
+	char os_name[128];
+	bool check_str(char* src, s32 src_len)
+	{
+		for (s32 i = 0; i < src_len; i++)
+		{
+			if (src[i] == '\0')
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool is_valid()
+	{
+		return check_str(device_name, 128)
+			&& check_str(device_type, 128)
+			&& check_str(device_mac, 128)
+			&& check_str(sys_name, 128)
+			&& check_str(sys_version, 128)
+			&& check_str(os_name, 128);
+	}
+};
+static_assert(sizeof(KNetDeviceInfo) == KNetDeviceInfo::PKT_SIZE, "");
+
 
 class KNetEnv
 {
 public:
 	KNetEnv()
 	{
-		Startup();
+		init_env();
 	}
 	~KNetEnv()
 	{
-		CleanUp();
+		clean_env();
 	}
-	static s32 Startup()
+	static s32 init_env()
 	{
 #ifdef _WIN32
 		WSADATA wsa_data;
@@ -80,14 +113,14 @@ public:
 		return 0;
 	}
 
-	static void CleanUp()
+	static void clean_env()
 	{
 #ifdef _WIN32
 		WSACleanup();
 #endif
 	}
 
-	static s32 GetLastError()
+	static s32 error_code()
 	{
 #ifdef _WIN32
 		return WSAGetLastError();
@@ -96,22 +129,23 @@ public:
 #endif
 	}
 
-	static s64 Now()
+	static s64 now_ms()
 	{
 		return  std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 
 
-	static s32& Errors();
+	static s32& error_count();
 
-	static s64& Status(KNET_STATUS id);
-	static void CleanStatus();
+	static s64& prof(KNET_STATUS id);
+	static void clean_prof();
 
 
-	static u32 CreateSequenceID();
-	static u64 CreatePKTID();
-	static u64 CreateSessionID();
+	static u32 create_seq_id();
+	static u64 create_session_id();
 
+
+	static s32 fill_device_info(KNetDeviceInfo& dvi);
 };
 
 

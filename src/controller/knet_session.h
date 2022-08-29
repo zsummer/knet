@@ -22,7 +22,6 @@
 #include "knet_base.h"
 #include <chrono>
 #include "knet_env.h"
-#include "knet_helper.h"
 #include "knet_select.h"
 #include "knet_socket.h"
 #include "knet_rudp.h"
@@ -61,7 +60,7 @@ public:
 	~KNetSession();
 	s32 Destroy();
 public:
-	KNetHandshakeKey hkey_;
+	KNetShakeID hkey_;
 	u64 session_id_;
 	u64 pkt_id_;
 	std::string physical_token;

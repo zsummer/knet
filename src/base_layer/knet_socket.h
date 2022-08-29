@@ -57,28 +57,27 @@ public:
     friend class KNetSelect;
     KNetSocket(s32 skt_id)
     {
-        KNetEnv::Status(KNT_STT_SKT_INSTRUCT_EVENTS)++;
+        KNetEnv::prof(KNT_STT_SKT_INSTRUCT_EVENTS)++;
         skt_ = INVALID_SOCKET;
         slot_id_ = 0;
         state_ = KNTS_INVALID;
         flag_ = KNTS_NONE;
         skt_id_ = skt_id;
         refs_ = 0;
-        last_active_ = KNetEnv::Now();
+        last_active_ = KNetEnv::now_ms();
         LogDebug() <<  *this;
     }
     ~KNetSocket()
     {
-        KNetEnv::Status(KNT_STT_SKT_DESTRUCT_EVENTS)++;
+        KNetEnv::prof(KNT_STT_SKT_DESTRUCT_EVENTS)++;
         if (state_ != KNTS_INVALID || skt_ != INVALID_SOCKET)
         {
-            KNetEnv::Errors()++;
+            KNetEnv::error_count()++;
         }
         LogDebug() << *this;
-        
     }
     
-    s32 InitSocket(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port)
+    s32 init(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port)
     {
         if (state_ != KNTS_INVALID)
         {
@@ -98,51 +97,35 @@ public:
             }
         }
 
-        last_active_ = KNetEnv::Now();
+        last_active_ = KNetEnv::now_ms();
         skt_ = socket(local_.family(), SOCK_DGRAM, 0);
         if (skt_ == INVALID_SOCKET)
         {
             return -5;
         }
-        KNetEnv::Status(KNT_STT_SKT_INIT_EVENTS)++;
+        KNetEnv::prof(KNT_STT_SKT_INIT_EVENTS)++;
         state_ = KNTS_LOCAL_INITED;
         ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());
         if (ret != 0)
         {
-            DestroySocket();
+            destroy();
             return -6;
         }
         
         local_.reset_from_socket(skt_);
         state_ = KNTS_BINDED;
-        KNetEnv::Status(KNT_STT_SKT_BIND_EVENTS)++;
+        KNetEnv::prof(KNT_STT_SKT_BIND_EVENTS)++;
         LogInfo() << "bind local:" << local_.debug_string();
         LogInfo() << *this;
         return 0;
     }
 
-    /* // 
-    s32 Connect()
-    {
-        if (state_ != KNTS_BINDED)
-        {
-            return -1;
-        }
-        s32 ret = connect(skt_, remote_.sockaddr_ptr(), remote_.sockaddr_len());
-        if (ret != 0)
-        {
-            return -2;
-        }
-        state_ = KNTS_CONNECTED;
-        return 0;
-    }
-    */
 
 
-    s32 SendTo(const char* pkg_data,  s32 len, KNetAddress& remote)
+    s32 send_pkt(const char* pkg_data,  s32 len, KNetAddress& remote)
     {
-        KNetEnv::Status(KNT_STT_SKT_SND_EVENTS)++;
-        KNetEnv::Status(KNT_STT_SKT_SND_BYTES)+= len;
+        KNetEnv::prof(KNT_STT_SKT_SND_EVENTS)++;
+        KNetEnv::prof(KNT_STT_SKT_SND_BYTES)+= len;
         s32 ret = sendto(skt_, pkg_data, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
         if (ret == SOCKET_ERROR)
         {
@@ -151,50 +134,50 @@ public:
         return 0;
     }
 
-    s32 RecvFrom(char* buf,  s32& len, KNetAddress& remote, s64 now_ms)
+    s32 recv_pkt(char* buf,  s32& len, KNetAddress& remote, s64 now_ms)
     {
         int addr_len = sizeof(remote.real_addr_.in6);
         int ret = recvfrom(skt_, buf, len, 0, (sockaddr*)&remote.real_addr_.in6, &addr_len);
         if (ret <= 0)
         {
             len = 0;
-            LogError() << "error:" << KNetEnv::GetLastError();
+            LogError() << "error:" << KNetEnv::error_code();
             return -1;
         }
         len = ret;
-        KNetEnv::Status(KNT_STT_SKT_RCV_EVENTS)++;
-        KNetEnv::Status(KNT_STT_SKT_RCV_BYTES)+= ret;
+        KNetEnv::prof(KNT_STT_SKT_RCV_EVENTS)++;
+        KNetEnv::prof(KNT_STT_SKT_RCV_BYTES)+= ret;
         last_active_ = now_ms;
         return 0;
     }
 
 
-    s32 DestroySocket()
+    s32 destroy()
     {
         if (state_ == KNTS_INVALID)
         {
-            KNetEnv::Errors()++;
+            KNetEnv::error_count()++;
             return -1;
         }
 
         if (refs_ > 0 && !(flag_ & KNTS_SERVER))
         {
-            KNetEnv::Errors()++;
+            KNetEnv::error_count()++;
             return -2;
         }
 
         if (refs_ > 1 && (flag_ & KNTS_SERVER))
         {
-            KNetEnv::Errors()++;
+            KNetEnv::error_count()++;
             return -3;
         }
 
         if (refs_  < 0)
         {
-            KNetEnv::Errors()++;
+            KNetEnv::error_count()++;
             return -4;
         }
-        KNetEnv::Status(KNT_STT_SKT_DESTROY_EVENTS)++;
+        KNetEnv::prof(KNT_STT_SKT_DESTROY_EVENTS)++;
         LogInfo() << *this;
 
         if (skt_ != INVALID_SOCKET)
@@ -207,11 +190,10 @@ public:
             skt_ = INVALID_SOCKET;
         }
 
-
         state_ = KNTS_INVALID;
         flag_ = KNTS_NONE;
         refs_ = 0;
-        last_active_ = KNetEnv::Now();
+        last_active_ = KNetEnv::now_ms();
         return 0;
     }
 

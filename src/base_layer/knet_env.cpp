@@ -20,7 +20,7 @@
 #include "knet_env.h"
 
 
-s32& KNetEnv::Errors()
+s32& KNetEnv::error_count()
 {
     static s32 global_errors_ = 0;
     return global_errors_;
@@ -28,33 +28,33 @@ s32& KNetEnv::Errors()
 
 s64 g_knet_status[KNT_STT_MAX] = { 0 };
 
-s64& KNetEnv::Status(KNET_STATUS id)
+s64& KNetEnv::prof(KNET_STATUS id)
 {
     return g_knet_status[id];
 }
 
-void KNetEnv::CleanStatus()
+void KNetEnv::clean_prof()
 {
     memset(g_knet_status, 0, sizeof(g_knet_status));
 }
 
-u32 KNetEnv::CreateSequenceID()
+u32 KNetEnv::create_seq_id()
 {
     static u32 seq_id = 0;
     return ++seq_id;
 }
 
-u64 KNetEnv::CreatePKTID()
-{
-    static u64 pkg_id = 0;
-    return ++pkg_id;
-}
 
-u64 KNetEnv::CreateSessionID()
+u64 KNetEnv::create_session_id()
 {
     static u64 session_id = 0;
     return ++session_id;
 }
 
 
+s32 KNetEnv::fill_device_info(KNetDeviceInfo& dvi)
+{
+    memset(&dvi, 0, sizeof(dvi));
+    return 0;
+}
 

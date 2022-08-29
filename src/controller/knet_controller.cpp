@@ -51,7 +51,7 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 	LogDebug() << s;
 	int len = KNT_UPKT_SIZE;
 	KNetAddress remote;
-	s32 ret = s.RecvFrom(pkg_rcv_, len, remote, now_ms);
+	s32 ret = s.recv_pkt(pkg_rcv_, len, remote, now_ms);
 	if (ret != 0)
 	{
 		return ;
@@ -186,12 +186,12 @@ void KNetController::OnPKTCH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 
 		return;
 	}
 
-	KNetEnv::Status(KNT_STT_SES_CREATE_EVENTS)++;
+	KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS)++;
 	KNetSession* session = new KNetSession();
 	session->hkey_ = ch.key;
 	if (ch.ch_mac == 0)
 	{
-		session->session_id_ = KNetEnv::CreateSessionID();
+		session->session_id_ = KNetEnv::create_session_id();
 		session->encrypt_key = "";
 	}
 	else
@@ -230,12 +230,13 @@ void KNetController::OnPKTSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 
 		LogError() << "no this";
 		return;
 	}
+	s.state_ = KNTS_ESTABLISHED;
 	establisheds_c_[hdr.session_id] = iter->second;
 	LogInfo() << "client established sucess";
-
-
-
 }
+
+
+
 
 void KNetController::OnPKTPSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
@@ -253,19 +254,19 @@ s32 KNetController::Destroy()
 
 
 
-s32 KNetController::StartConnect(KNetHandshakeKey hkey, const KNetConfigs& configs)
+s32 KNetController::StartConnect(KNetShakeID hkey, const KNetConfigs& configs)
 {
 	u32 has_error = 0;
 	KNetSession* session = NULL;
 	if (!KNetHelper::CheckKey(hkey))
 	{
-		KNetEnv::Errors()++;
+		KNetEnv::error_count()++;
 		return -1;
 	}
 
 	//if (sessions_.full())
 	{
-		//KNetEnv::Errors()++;
+		//KNetEnv::error_count()++;
 		//return -1;
 	}
 
@@ -273,19 +274,19 @@ s32 KNetController::StartConnect(KNetHandshakeKey hkey, const KNetConfigs& confi
 	{
 		auto& c = configs[i];
 
-		KNetSocket* ns = PopFreeSocket();
+		KNetSocket* ns = create_stream();
 		if (ns == NULL)
 		{
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			continue;
 		}
 
-		s32 ret = ns->InitSocket(c.localhost.c_str(), c.localport, c.remote_ip.c_str(), c.remote_port);
+		s32 ret = ns->init(c.localhost.c_str(), c.localport, c.remote_ip.c_str(), c.remote_port);
 		if (ret != 0)
 		{
 			LogError() << "init " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port << " has error";
 			has_error ++;
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			continue;
 		}
 
@@ -294,34 +295,34 @@ s32 KNetController::StartConnect(KNetHandshakeKey hkey, const KNetConfigs& confi
 		ns->slot_id_ = i;
 		if (session == NULL)
 		{
-			KNetEnv::Status(KNT_STT_SES_CREATE_EVENTS)++;
-			session = new KNetSession();
+			
+			session = create_session();
 			session->hkey_ = hkey;
 		}
 		KNetSocketSlot slot;
 		slot.skt_id_ = ns->skt_id_;
-		slot.last_active_ = KNetEnv::Now();
+		slot.last_active_ = KNetEnv::now_ms();
 		slot.remote_ = ns->remote_;
 		session->slots_[i] = slot;
 		ns->state_ = KNTS_HANDSHAKE_CH;
 		ns->refs_++;
 		KNetUHDR hdr;
 		KNetPKTCH ch;
-		PKTCH(*ns, hdr, ch, *session, KNetEnv::Now());
+		PKTCH(*ns, hdr, ch, *session, KNetEnv::now_ms());
 		set_snd_data_offset(knet_encode_ch(snd_data(), ch));
 		make_hdr(hdr, session->session_id_, session->pkt_id_++, 0, 0, KNETCMD_CH, 0);
 		write_hdr(hdr);
 		ret = send_packet(*ns, snd_head(), snd_len(), slot.remote_, 0);
 		if (ret != 0)
 		{
-			LogError() << "SendTo " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " has error";
+			LogError() << "send_pkt " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " has error";
 			has_error++;
 			continue;
 		}	
 	}
 	if (has_error == configs.size())
 	{
-		RemoveSession(session);
+		destroy_session(session);
 		return -1;
 	}
 	handshakes_c_.insert(std::make_pair(hkey, session));
@@ -333,10 +334,20 @@ s32 KNetController::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& 
 {
 	static const s32 offset = offsetof(KNetUHDR, slot);
 	*(pkg + offset) = s.slot_id_;
-	return s.SendTo(pkg, len, remote);
+	return s.send_pkt(pkg, len, remote);
 }
 
-
+KNetShakeID KNetController::CreateShakeID()
+{
+	KNetDeviceInfo dvi;
+	KNetEnv::fill_device_info(dvi);
+	KNetShakeID key;
+	key.system_time = KNetEnv::now_ms();
+	key.mac_code = (u32)(dvi.device_name[0] + dvi.device_mac[0] + dvi.device_type[0] + dvi.sys_name[0] + dvi.sys_version[0] + dvi.os_name[0]);
+	key.rand_code = (u32)rand();
+	key.sequence_code = KNetEnv::create_seq_id();
+	return key;
+}
 
 s32 KNetController::check_hdr(KNetUHDR& hdr, const char* data, s32 len)
 {
@@ -421,7 +432,7 @@ s32 KNetController::CleanSession()
 	}
 	for (auto& s : nss_)
 	{
-		s.DestroySocket();
+		s.destroy();
 	}
 	nss_.clear();
 	return 0;
@@ -429,7 +440,7 @@ s32 KNetController::CleanSession()
 
 
 
-s32 KNetController::RemoveSession(KNetHandshakeKey hkey, u64 session_id)
+s32 KNetController::RemoveSession(KNetShakeID hkey, u64 session_id)
 {
 	KNetSession* session = NULL;
 	if (true)
@@ -459,7 +470,7 @@ s32 KNetController::RemoveSession(KNetHandshakeKey hkey, u64 session_id)
 		{
 			if (session != NULL)
 			{
-				KNetEnv::Errors()++;
+				KNetEnv::error_count()++;
 			}
 			session = iter->second;
 			establisheds_c_.erase(iter);
@@ -473,20 +484,25 @@ s32 KNetController::RemoveSession(KNetHandshakeKey hkey, u64 session_id)
 		{
 			if (session != NULL)
 			{
-				KNetEnv::Errors()++;
+				KNetEnv::error_count()++;
 			}
 			session = iter->second;
 			establisheds_s_.erase(iter);
 		}
 	}
 
-	return RemoveSession(session);
+	return destroy_session(session);
 }
 
 
+KNetSession* KNetController::create_session()
+{
+	KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS)++;
+	KNetSession* session = new KNetSession();
+	return session;
+}
 
-
-s32 KNetController::RemoveSession(KNetSession* session)
+s32 KNetController::destroy_session(KNetSession* session)
 {
 	if (session == NULL)
 	{
@@ -497,23 +513,23 @@ s32 KNetController::RemoveSession(KNetSession* session)
 	{
 		if (s.skt_id_ < 0 || s.skt_id_ >= (u32)nss_.size())
 		{
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			continue;
 		}
 		KNetSocket& skt = nss_[s.skt_id_];
 		if (skt.skt_id_ != s.skt_id_)
 		{
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			continue;
 		}
 		if (skt.refs_ <= 0)
 		{
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			continue;
 		}
 		skt.refs_--;
 	}
-	KNetEnv::Status(KNT_STT_SES_DESTROY_EVENTS)++;
+	KNetEnv::prof(KNT_STT_SES_DESTROY_EVENTS)++;
 	delete session;
 	return 0;
 }
@@ -523,19 +539,19 @@ s32 KNetController::StartServer(const KNetConfigs& configs)
 	bool has_error = false;
 	for (auto& c : configs)
 	{
-		KNetSocket* ns = PopFreeSocket();
+		KNetSocket* ns = create_stream();
 		if (ns == NULL)
 		{
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			continue;
 		}
 
-		s32 ret = ns->InitSocket(c.localhost.c_str(), c.localport, NULL, 0);
+		s32 ret = ns->init(c.localhost.c_str(), c.localport, NULL, 0);
 		if (ret != 0)
 		{
 			LogError() << "init " << c.localhost << ":" << c.localport << " has error";
 			has_error = true;
-			KNetEnv::Errors()++;
+			KNetEnv::error_count()++;
 			break;
 		}
 
@@ -561,14 +577,14 @@ s32 KNetController::DoSelect()
 }
 
 
-KNetSocket* KNetController::PopFreeSocket()
+KNetSocket* KNetController::create_stream()
 {
 	for (u32 i = 0; i < nss_.size(); i++)
 	{
 		KNetSocket& s = nss_[i];
 		if (s.state_ == KNTS_INVALID)
 		{
-			KNetEnv::Status(KNT_STT_SKT_ALLOC_EVENTS)++;
+			KNetEnv::prof(KNT_STT_SKT_ALLOC_EVENTS)++;
 			return &s;
 		}
 	}
@@ -578,19 +594,19 @@ KNetSocket* KNetController::PopFreeSocket()
 		return NULL;
 	}
 	nss_.emplace_back(nss_.size());
-	KNetEnv::Status(KNT_STT_SKT_ALLOC_EVENTS)++;
+	KNetEnv::prof(KNT_STT_SKT_ALLOC_EVENTS)++;
 	return &nss_.back();
 }
 
 
-void KNetController::PushFreeSocket(KNetSocket* s)
+void KNetController::destroy_stream(KNetSocket* s)
 {
 	if (s->state_ == KNTS_INVALID)
 	{
 		return;
 	}
-	KNetEnv::Status(KNT_STT_SKT_FREE_EVENTS)++;
-	s->DestroySocket();
+	KNetEnv::prof(KNT_STT_SKT_FREE_EVENTS)++;
+	s->destroy();
 
 }
 

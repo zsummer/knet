@@ -130,7 +130,7 @@ struct KNetAddress
         s32 ret = inet_pton(AF_INET, ip, &real_addr_.in4.sin_addr);
         if (ret < 0)
         {
-            return KNetEnv::GetLastError();
+            return KNetEnv::error_code();
         }
         return 0;
     }
@@ -139,7 +139,7 @@ struct KNetAddress
         s32 ret = inet_pton(AF_INET6, ip, &real_addr_.in6.sin6_addr);
         if (ret < 0)
         {
-            return KNetEnv::GetLastError();
+            return KNetEnv::error_code();
         }
         return 0;
     }

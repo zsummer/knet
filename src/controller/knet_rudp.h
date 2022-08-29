@@ -181,24 +181,125 @@ static inline u64 knet_encode_pkt_mac(const char* data, s32 len,  KNetUHDR& hdr,
 
 
 
+struct KNetShakeID
+{
+	static const u32 PKT_SIZE = 8 + 4 + 4 + 8;
+	s64 system_time;
+	u32 sequence_code;
+	u32 rand_code;
+	u64 mac_code;
+	struct Hash
+	{
+		u64 operator()(const KNetShakeID& key) const
+		{
+			u64 hash_key = (u64)key.system_time << 16;
+			hash_key |= key.rand_code & 0xffff;
+			static const u64 h = (0x84222325ULL << 32) | 0xcbf29ce4ULL;
+			static const u64 kPrime = (0x00000100ULL << 32) | 0x000001b3ULL;
+			hash_key ^= h;
+			hash_key *= kPrime;
+			return hash_key;
+		}
+	};
+};
 
-static inline char* KNetEncodeKNetHandshakeKey(char* p, const KNetHandshakeKey& pkt)
+static_assert(sizeof(KNetShakeID) == KNetShakeID::PKT_SIZE, "");
+
+
+
+inline bool operator   <(const KNetShakeID& key1, const KNetShakeID& key2)
+{
+	if (key1.system_time < key2.system_time
+		|| key1.sequence_code < key2.sequence_code
+		|| key1.mac_code < key2.mac_code
+		|| key1.rand_code < key2.rand_code)
+	{
+		return true;
+	}
+	return false;
+}
+
+inline bool operator   ==(const KNetShakeID& key1, const KNetShakeID& key2)
+{
+	if (key1.system_time == key2.system_time
+		&& key1.sequence_code == key2.sequence_code
+		&& key1.mac_code == key2.mac_code
+		&& key1.rand_code == key2.rand_code)
+	{
+		return true;
+	}
+	return false;
+}
+
+
+
+
+
+class KNetHelper
+{
+public:
+	static KNetShakeID CreateKey()
+	{
+		KNetDeviceInfo kdi;
+		memset(&kdi, 0, sizeof(kdi));
+		return CreateKey(kdi);
+	}
+	static KNetShakeID CreateKey(const KNetDeviceInfo& kdi)
+	{
+		KNetShakeID key;
+		key.system_time = KNetEnv::now_ms();
+		key.mac_code = (u32)(kdi.device_name[0] + kdi.device_mac[0] + kdi.device_type[0] + kdi.sys_name[0] + kdi.sys_version[0] + kdi.os_name[0]);
+		key.rand_code = (u32)rand();
+		key.sequence_code = KNetEnv::create_seq_id();
+		return key;
+	}
+
+	static bool CheckKey(const KNetShakeID& key)
+	{
+		s64 diff_ms = llabs(key.system_time - KNetEnv::now_ms());
+		if (diff_ms > 5 * 60 * 1000)
+		{
+			return false;
+		}
+		if (key.sequence_code == 0)
+		{
+			return false;
+		}
+		return true;
+	}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static inline char* KNetEncodeKNetShakeID(char* p, const KNetShakeID& pkt)
 {
 	p = ikcp_encode64u(p, (u64)pkt.system_time);
 	p = ikcp_encode32u(p, pkt.sequence_code);
 	p = ikcp_encode32u(p, pkt.rand_code);
 	p = ikcp_encode64u(p, pkt.mac_code);
-	static_assert(8 * 3 == KNetHandshakeKey::PKT_SIZE, "sync change this.");
+	static_assert(8 * 3 == KNetShakeID::PKT_SIZE, "sync change this.");
 	return p;
 }
 
-static inline const char* KNetDecodeKNetHandshakeKey(const char* p, KNetHandshakeKey& pkt)
+static inline const char* KNetDecodeKNetShakeID(const char* p, KNetShakeID& pkt)
 {
 	p = ikcp_decode64u(p, (u64*)&pkt.system_time);
 	p = ikcp_decode32u(p, &pkt.sequence_code);
 	p = ikcp_decode32u(p, &pkt.rand_code);
 	p = ikcp_decode64u(p, &pkt.mac_code);
-	static_assert(8 * 3 == KNetHandshakeKey::PKT_SIZE, "sync change this.");
+	static_assert(8 * 3 == KNetShakeID::PKT_SIZE, "sync change this.");
 	return p;
 }
 
@@ -232,9 +333,9 @@ static inline const char* KNetDecodeKNetDeviceInfo(const char* p, KNetDeviceInfo
 
 struct KNetPKTCH
 {
-	static const u32 PKT_SIZE = 8+KNetHandshakeKey::PKT_SIZE + 8 + 16*2 + KNetDeviceInfo::PKT_SIZE + 400;
+	static const u32 PKT_SIZE = 8+KNetShakeID::PKT_SIZE + 8 + 16*2 + KNetDeviceInfo::PKT_SIZE + 400;
 	u64 ch_mac;
-	KNetHandshakeKey key;
+	KNetShakeID key;
 	u64 session_id;
 	char cg[16];
 	char cp[16];
@@ -247,7 +348,7 @@ static_assert(sizeof(KNetPKTCH) == KNetPKTCH::PKT_SIZE, "");
 static inline char* knet_encode_ch(char* p, const KNetPKTCH& pkt)
 {
 	p = ikcp_encode64u(p, pkt.ch_mac);
-	p = KNetEncodeKNetHandshakeKey(p, pkt.key);
+	p = KNetEncodeKNetShakeID(p, pkt.key);
 	p = ikcp_encode64u(p, pkt.session_id);
 	p = ikcp_encode_str(p, pkt.cg, 16);
 	p = ikcp_encode_str(p, pkt.cp, 16);
@@ -259,7 +360,7 @@ static inline char* knet_encode_ch(char* p, const KNetPKTCH& pkt)
 static inline const char* knet_decode_ch(const char* p, KNetPKTCH& pkt)
 {
 	p = ikcp_decode64u(p, &pkt.ch_mac);
-	p = KNetDecodeKNetHandshakeKey(p, pkt.key);
+	p = KNetDecodeKNetShakeID(p, pkt.key);
 	p = ikcp_decode64u(p, &pkt.session_id);
 	p = ikcp_decode_str(p, pkt.cg, 16);
 	p = ikcp_decode_str(p, pkt.cp, 16);
@@ -273,11 +374,11 @@ static inline const char* knet_decode_ch(const char* p, KNetPKTCH& pkt)
 
 struct KNetPKTSH
 {
-	static const u32 PKT_SIZE = 4+4+8+KNetHandshakeKey::PKT_SIZE+8+16*2;
+	static const u32 PKT_SIZE = 4+4+8+KNetShakeID::PKT_SIZE+8+16*2;
 	s32 result;
 	s32 noise;
 	u64 sh_mac;
-	KNetHandshakeKey key;
+	KNetShakeID key;
 	u64 session_id;
 	char sg[16];
 	char sp[16];
@@ -289,7 +390,7 @@ static inline char* knet_encode_sh(char* p, const KNetPKTSH& pkt)
 	p = ikcp_encode32u(p, pkt.result);
 	p = ikcp_encode32u(p, pkt.noise);
 	p = ikcp_encode64u(p, pkt.sh_mac);
-	p = KNetEncodeKNetHandshakeKey(p, pkt.key);
+	p = KNetEncodeKNetShakeID(p, pkt.key);
 	p = ikcp_encode64u(p, pkt.session_id);
 	p = ikcp_encode_str(p, pkt.sg, 16);
 	p = ikcp_encode_str(p, pkt.sp, 16);
@@ -301,7 +402,7 @@ static inline const char* knet_decode_sh(const char* p, KNetPKTSH& pkt)
 	p = ikcp_decode32u(p, (u32*)&pkt.result);
 	p = ikcp_decode32u(p, (u32*)&pkt.noise);
 	p = ikcp_decode64u(p, (u64*)&pkt.sh_mac);
-	p = KNetDecodeKNetHandshakeKey(p, pkt.key);
+	p = KNetDecodeKNetShakeID(p, pkt.key);
 	p = ikcp_decode64u(p, (u64*)&pkt.session_id);
 	p = ikcp_decode_str(p, pkt.sg, 16);
 	p = ikcp_decode_str(p, pkt.sp, 16);

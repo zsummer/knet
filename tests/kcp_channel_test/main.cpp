@@ -16,15 +16,15 @@ s32 test_socket_bind()
 {
 	KNetSocket s1(1);
 	KNetSocket s2(2);
-	s32 ret = s1.InitSocket("0.0.0.0", 0, "127.0.0.1", 8080);
+	s32 ret = s1.init("0.0.0.0", 0, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
-	ret = s2.InitSocket("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
+	ret = s2.init("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
-	s1.DestroySocket();
-	ret = s2.InitSocket("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
+	s1.destroy();
+	ret = s2.init("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
-	s2.DestroySocket();
-	KNetAssert(KNetEnv::Errors() == 0, "");
+	s2.destroy();
+	KNetAssert(KNetEnv::error_count() == 0, "");
 	return 0;
 }
 
@@ -39,19 +39,19 @@ s32 test_socket_bind2()
 
 	KNetSocket s1(1);
 	KNetSocket s2(2);
-	ret = s1.InitSocket("127.0.0.1", 19870, "127.0.0.1", 8080);
+	ret = s1.init("127.0.0.1", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
-	ret = s2.InitSocket("127.0.0.2", 19870, "127.0.0.1", 8080);
+	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
 
 	controller.Destroy();
-	ret = s1.InitSocket("127.0.0.1", 19870, "127.0.0.1", 8080);
+	ret = s1.init("127.0.0.1", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
-	ret = s2.InitSocket("127.0.0.2", 19870, "127.0.0.1", 8080);
+	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
-	s1.DestroySocket();
-	s2.DestroySocket();
-	KNetAssert(KNetEnv::Errors() == 0, "");
+	s1.destroy();
+	s2.destroy();
+	KNetAssert(KNetEnv::error_count() == 0, "");
 	return 0;
 }
 
@@ -62,8 +62,8 @@ int main()
 	KNetAssert(test_socket_bind() == 0, "");
 	//KNetAssert(test_socket_bind2() == 0, "");
 
-	KNetEnv::CleanStatus();
-	KNetEnv::Errors() = 0;
+	KNetEnv::clean_prof();
+	KNetEnv::error_count() = 0;
 
 
 	KNetConfigs mc;
@@ -101,7 +101,7 @@ int main()
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 	LogInfo() << "finish.";
-	KNetAssert(KNetEnv::Errors() == 0, "");
+	KNetAssert(KNetEnv::error_count() == 0, "");
 	return 0;
 }
 
