@@ -33,6 +33,7 @@ enum KNTS_STATE: u16
     KNTS_LOCAL_INITED,
     KNTS_BINDED,
     KNTS_CONNECTED,
+    KNTS_HANDSHAKE_PB,
     KNTS_HANDSHAKE_CH,
     KNTS_HANDSHAKE_SH,
     KNTS_ESTABLISHED,
@@ -55,16 +56,11 @@ public:
     friend class KNetSession;
     friend class KNetController;
     friend class KNetSelect;
-    KNetSocket(s32 skt_id)
+    KNetSocket(s32 inst_id)
     {
         KNetEnv::prof(KNT_STT_SKT_INSTRUCT_EVENTS)++;
-        skt_ = INVALID_SOCKET;
-        slot_id_ = 0;
-        state_ = KNTS_INVALID;
-        flag_ = KNTS_NONE;
-        skt_id_ = skt_id;
-        refs_ = 0;
-        last_active_ = KNetEnv::now_ms();
+        inst_id_ = inst_id;
+        reset();
         LogDebug() <<  *this;
     }
     ~KNetSocket()
@@ -201,9 +197,22 @@ public:
 
 
 public:
-    s32 skt_id_;
+    void reset()
+    {
+        skt_ = INVALID_SOCKET;
+        slot_id_ = 0;
+        state_ = KNTS_INVALID;
+        flag_ = KNTS_NONE;
+        refs_ = 0;
+        client_session_inst_id_ = -1;
+        last_active_ = KNetEnv::now_ms(); 
+        reset_probe();
+    }
+    bool is_server() const { return flag_ & KNTS_SERVER; }
+    s32 inst_id_;
     u8  slot_id_;
     s32 refs_;
+    s32 client_session_inst_id_;
     u16 state_;
     u16 flag_;
     SOCKET skt_;
@@ -211,6 +220,25 @@ public:
     KNetAddress remote_;
  public:
      s64 last_active_;
+
+public:
+    void reset_probe()
+    {
+        probe_seq_id_ = 0;
+        probe_last_ping_ = 0;
+        probe_avg_ping_ = 0;
+        probe_snd_cnt_ = 0;
+        probe_rcv_cnt_ = 0;
+        probe_shake_id_ = 0;
+    }
+
+public:
+    u64 probe_seq_id_;
+    s64 probe_last_ping_;
+    s64 probe_avg_ping_;
+    u32 probe_snd_cnt_;
+    u32 probe_rcv_cnt_;
+    u32 probe_shake_id_;
 };
 
 
@@ -218,15 +246,15 @@ inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s)
 {
     if (s.flag_ & KNTS_SERVER)
     {
-        ls << "server: skt_id:" << s.skt_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ <<", refs:" << s.refs_ << ", local:" << s.local_.debug_string() ;
+        ls << "server: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ <<", refs:" << s.refs_ << ", local:" << s.local_.debug_string() ;
     }
     else if (s.flag_ & KNTS_CLINET)
     {
-        ls << "client: skt_id:" << s.skt_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
+        ls << "client: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
     }
     else
     {
-        ls << "none: skt_id:" << s.skt_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
+        ls << "none: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
     }
     return ls;
 }

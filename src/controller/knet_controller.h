@@ -36,7 +36,7 @@ static_assert(KNET_MAX_SESSIONS >= 10, "");
 
 
 class KNetSession;
-using KNetSessions = zlist<KNetSession, KNET_MAX_SESSIONS>;
+using KNetSessions = zarray<KNetSession, KNET_MAX_SESSIONS>;
 
 
 
@@ -48,7 +48,7 @@ public:
 	s32 StartServer(const KNetConfigs& configs);
 
 	
-	s32 StartConnect(KNetShakeID hkey, const KNetConfigs& configs);
+	s32 StartConnect(const KNetConfigs& configs, s32& session_inst_id);
 	s32 RemoveSession(KNetShakeID hkey, u64 session_id);
 	s32 CleanSession();
 
@@ -62,18 +62,30 @@ public:
 	void PKTSH(KNetSocket& s, KNetUHDR& hdr, KNetPKTSH& sh, KNetSession& session, s64 now_ms);
 	void PKTPSH(KNetSocket& s, KNetUHDR& hdr, KNetPKTSH& sh, KNetSession& session, s64 now_ms);
 
-	void OnPKTCH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 	void OnPKTSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 	void OnPKTPSH(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
+public:
+	s32 send_probe(KNetSocket& s);
+	s32 send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAddress& remote);
+	void on_probe(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_probe_ack(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+
+	s32 send_ch(KNetSocket& s, KNetSession& session);
+	void on_ch(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+
+	s32 send_sh(KNetSocket& s, const KNetPKTCH& ch, const KNetPKTSH& sh, KNetAddress& remote);
+
+	void on_sh(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+
+
+
 private:
 
-	KNetShakeID CreateShakeID();
-
-
 	s32 send_packet(KNetSocket&, char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
-	s32 destroy_session(KNetSession* session);
 	KNetSession* create_session();
+	s32 destroy_session(KNetSession* session);
+
 	KNetSocket* create_stream();
 	void destroy_stream(KNetSocket*);
 
@@ -91,13 +103,14 @@ private:
 private:
 	u32 controller_state_;
 	KNetSockets nss_;
+	KNetSessions sessions_;
 	char pkg_rcv_[KNT_UPKT_SIZE];
 	s32 pkg_rcv_offset_;
 	char pkg_snd_[KNT_UPKT_SIZE];
 	s32 pkg_snd_offset_;
 	//KNetSessions sessions_;
-	std::unordered_map<KNetShakeID, KNetSession*, KNetShakeID::Hash> handshakes_c_;
-	std::unordered_map<KNetShakeID, KNetSession*, KNetShakeID::Hash> handshakes_s_;
+	std::unordered_map<u64, KNetSession*> handshakes_c_;
+	std::unordered_map<u64, KNetSession*> handshakes_s_;
 	std::unordered_map<u64, KNetSession*> establisheds_c_;
 	std::unordered_map<u64, KNetSession*> establisheds_s_;
 };

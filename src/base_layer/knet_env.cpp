@@ -38,9 +38,9 @@ void KNetEnv::clean_prof()
     memset(g_knet_status, 0, sizeof(g_knet_status));
 }
 
-u32 KNetEnv::create_seq_id()
+u64 KNetEnv::create_seq_id()
 {
-    static u32 seq_id = 0;
+    static u64 seq_id = 0;
     return ++seq_id;
 }
 

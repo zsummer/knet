@@ -18,9 +18,11 @@
 
 #include "knet_session.h"
 
-KNetSession::KNetSession()
+KNetSession::KNetSession(s32 inst_id)
 {
-
+    inst_id_ = inst_id;
+    state_ = KNTS_INVALID;
+	init();
 }
 
 
@@ -31,6 +33,39 @@ KNetSession::~KNetSession()
 
 }
 
+s32 KNetSession::init()
+{
+	if (state_ != KNTS_INVALID)
+	{
+		return -1;
+	}
+	state_ = KNTS_LOCAL_INITED;
+	session_id_ = 0;
+	shake_id_ = 0;
+	snd_pkt_id_ = 0;
+	encrypt_key = "";
+	configs_.clear();
+	memset(sg_, 0, sizeof(sg_));
+	memset(sg_, 0, sizeof(sg_));
+	memset(box_, 0, sizeof(box_));
+	memset(&slots_, 0, sizeof(slots_));
+	return 0;
+}
 
+
+
+
+s32 KNetSession::destroy()
+{
+	for (auto& slot : slots_)
+	{
+		if (slot.inst_id_ != -1)
+		{
+			return -1;
+		}
+	}
+    state_ = KNTS_INVALID;
+	return 0;
+}
 
 

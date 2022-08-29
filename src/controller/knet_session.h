@@ -46,9 +46,9 @@ struct KNetSocketSlot
 {
 	KNetSocketSlot()
 	{
-		skt_id_ = -1;
+		inst_id_ = -1;
 	}
-	s32 skt_id_;
+	s32 inst_id_;
 	KNetAddress remote_;
 	s64 last_active_;
 };
@@ -56,18 +56,22 @@ struct KNetSocketSlot
 class KNetSession
 {
 public:
-	KNetSession();
+	KNetSession(s32 inst_id);
 	~KNetSession();
-	s32 Destroy();
+	s32 init();
+	s32 destroy();
 public:
-	KNetShakeID hkey_;
+	s32 inst_id_;
+	u16 state_;
 	u64 session_id_;
-	u64 pkt_id_;
-	std::string physical_token;
+	u64 shake_id_;
+	u64 snd_pkt_id_;
+
 	std::string encrypt_key;
 	KNetConfigs configs_;
 	char sg_[16];
 	char sp_[16];
+	char box_[16];
 	std::array<KNetSocketSlot, KNT_MAX_SLOTS> slots_;
 };
 

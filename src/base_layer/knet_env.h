@@ -47,6 +47,8 @@ enum KNET_STATUS
 
 	KNT_STT_SES_CREATE_EVENTS,
 	KNT_STT_SES_DESTROY_EVENTS,
+	KNT_STT_SES_ALLOC_EVENTS,
+	KNT_STT_SES_FREE_EVENTS,
 
 	KNT_STT_CTL_START_EVENTS,
 	KNT_STT_CTL_DESTROY_EVENTS,
@@ -141,7 +143,7 @@ public:
 	static void clean_prof();
 
 
-	static u32 create_seq_id();
+	static u64 create_seq_id();
 	static u64 create_session_id();
 
 
