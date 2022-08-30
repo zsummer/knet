@@ -32,21 +32,8 @@ KNetController::~KNetController()
 
 }
 
-void KNetController::OnSocketTick(KNetSocket&s, s64 now_ms)
-{
-	if (s.state_ == KNTS_INVALID)
-	{
-		return;
-	}
-	if (s.refs_ == 0)
-	{
-		LogDebug() << s;
-		//s.DestroySocket();
-		return;
-	}
-}
 
-void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
+void KNetController::on_readable(KNetSocket& s, s64 now_ms)
 {
 	LogDebug() << s;
 	int len = KNT_UPKT_SIZE;
@@ -74,6 +61,9 @@ void KNetController::OnSocketReadable(KNetSocket& s, s64 now_ms)
 	{
 	case KNETCMD_PB:
 		on_probe(s, uhdr, p, len - KNetHeader::HDR_SIZE, remote, now_ms);
+		break;
+	case KNETCMD_PB_ACK:
+		on_probe_ack(s, uhdr, p, len - KNetHeader::HDR_SIZE, remote, now_ms);
 		break;
 	case KNETCMD_CH:
 		on_ch(s, uhdr, p, len - KNetHeader::HDR_SIZE, remote, now_ms);
@@ -168,6 +158,7 @@ s32 KNetController::StartConnect(const KNetConfigs& configs, s32& session_inst_i
 		LogInfo() << "init " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " success";
 		ns->state_ = KNTS_BINDED;
 		ns->slot_id_ = i;
+		ns->flag_ |= KNTS_CLINET;
 		if (session_inst_id == -1)
 		{
 			session = create_session();
@@ -311,7 +302,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 	if (s.state_ == KNTS_HANDSHAKE_PB)
 	{
 		s.probe_shake_id_ = packet.shake_id;
-		if (s.client_session_inst_id_ == -1 || s.is_server() || s.client_session_inst_id_ >= sessions_.size())
+		if (s.client_session_inst_id_ == -1 || s.is_server() || s.client_session_inst_id_ >= (s32)sessions_.size())
 		{
 			LogError() << "error";
 			return;
@@ -319,14 +310,14 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 		KNetSession& session = sessions_[s.client_session_inst_id_];
 		if (session.state_ != KNTS_LOCAL_INITED)
 		{
-			LogError() << "error";
+			LogDebug() << "session.state_ aready ch";
 			return;
 		}
 		session.state_ = KNTS_HANDSHAKE_CH;
 		session.shake_id_ = s.probe_shake_id_;
 		for (auto& slot: session.slots_)
 		{
-			if (slot.inst_id_ >= nss_.size())
+			if (slot.inst_id_ >= (s32)nss_.size())
 			{
 				LogError() << "error";
 				continue;
@@ -470,7 +461,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	}
 	KNetSH sh;
 	knet_decode_packet(pkg, sh);
-	if (s.client_session_inst_id_ < 0 || s.client_session_inst_id_ >= sessions_.size())
+	if (s.client_session_inst_id_ < 0 || s.client_session_inst_id_ >= (s32)sessions_.size())
 	{
 		LogError() << "sh error";
 		return;
@@ -485,7 +476,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	session.session_id_ = sh.session_id;
 	for (auto& slot: session.slots_)
 	{
-		if (slot.inst_id_  == -1 || slot.inst_id_ >= nss_.size())
+		if (slot.inst_id_  == -1 || slot.inst_id_ >= (s32)nss_.size())
 		{
 			continue;
 		}
@@ -493,7 +484,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	}
 
 	LogInfo() << "client established sucess";
-
+	send_psh(session, "123", 4);
 }
 
 
@@ -507,7 +498,7 @@ s32 KNetController::send_psh(KNetSession& s, char* psh_buf, s32 len)
 	s32 send_cnt = 0;
 	for (auto& slot : s.slots_)
 	{
-		if (slot.inst_id_ == -1 || slot.inst_id_ >= nss_.size())
+		if (slot.inst_id_ == -1 || slot.inst_id_ >= (s32)nss_.size())
 		{
 			continue;
 		}
@@ -566,7 +557,7 @@ s32 KNetController::send_rst(KNetSession& s)
 	s32 send_cnt = 0;
 	for (auto& slot : s.slots_)
 	{
-		if (slot.inst_id_ == -1 || slot.inst_id_ >= nss_.size())
+		if (slot.inst_id_ == -1 || slot.inst_id_ >= (s32)nss_.size())
 		{
 			continue;
 		}
@@ -703,6 +694,17 @@ s32 KNetController::CleanSession()
 
 
 
+s32 KNetController::RemoveConnect(s32 session_inst_id)
+{
+	if (session_inst_id >= (s32)sessions_.size() || session_inst_id < 0)
+	{
+		return -1;
+	}
+	return RemoveSession(sessions_[session_inst_id].shake_id_, sessions_[session_inst_id].session_id_);
+}
+
+
+
 s32 KNetController::RemoveSession(u64 shake_id, u64 session_id)
 {
 	KNetSession* session = NULL;
@@ -784,7 +786,7 @@ s32 KNetController::destroy_session(KNetSession* session)
 
 	for (auto s: session->slots_)
 	{
-		if (s.inst_id_ < 0 || s.inst_id_ >= (u32)nss_.size())
+		if (s.inst_id_ < 0 || s.inst_id_ >= (s32)nss_.size())
 		{
 			KNetEnv::error_count()++;
 			continue;
@@ -846,7 +848,7 @@ s32 KNetController::StartServer(const KNetConfigs& configs)
 
 s32 KNetController::DoSelect()
 {
-	return Select(nss_, 0);
+	return do_select(nss_, 0);
 }
 
 

@@ -24,7 +24,7 @@
 static const u32 knet_fixed_size_ = sizeof(KNetSocket);
 static const u32 knet_array_fixed_size_ = sizeof(KNetSockets);
 
-s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
+s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 {
 	struct timeval tv;
 	tv.tv_sec = 0;
@@ -37,7 +37,6 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 	SOCKET max_fd = -1; //windows is error but will ignore
 	for (auto& s : sets)
 	{
-		OnSocketTick(s, enter_now_ms);
 		if (s.state_ < KNTS_BINDED || s.state_ >= KNTS_LINGER)
 		{
 			continue;
@@ -85,7 +84,7 @@ s32 KNetSelect::Select(KNetSockets& sets, s64 wait_ms)
 
 		if (FD_ISSET(s.skt_, &rdfds))
 		{
-			OnSocketReadable(s, post_now_ms);
+			on_readable(s, post_now_ms);
 		}
 	}
 	return 0;

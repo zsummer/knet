@@ -238,7 +238,7 @@ public:
     s64 probe_avg_ping_;
     u32 probe_snd_cnt_;
     u32 probe_rcv_cnt_;
-    u32 probe_shake_id_;
+    u64 probe_shake_id_;
 };
 
 

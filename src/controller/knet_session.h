@@ -44,10 +44,6 @@ using KNetConfigs = zarray<KNetConfig, MAX_SESSION_CONFIGS>;
 
 struct KNetSocketSlot
 {
-	KNetSocketSlot()
-	{
-		inst_id_ = -1;
-	}
 	s32 inst_id_;
 	KNetAddress remote_;
 	s64 last_active_;

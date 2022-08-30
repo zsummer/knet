@@ -48,7 +48,11 @@ s32 KNetSession::init()
 	memset(sg_, 0, sizeof(sg_));
 	memset(sg_, 0, sizeof(sg_));
 	memset(box_, 0, sizeof(box_));
-	memset(&slots_, 0, sizeof(slots_));
+	for (auto& slot : slots_)
+	{
+		slot.inst_id_ = -1;
+		slot.last_active_ = 0;
+	}
 	return 0;
 }
 

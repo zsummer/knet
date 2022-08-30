@@ -267,7 +267,7 @@ struct KNetProbeAck
 	static const u32 PKT_SIZE = 8 * 4;
 	s64 result;
 	s64 client_ms;
-	s64 client_seq_id;
+	u64 client_seq_id;
 	u64 shake_id;
 };
 static_assert(sizeof(KNetProbeAck) == KNetProbeAck::PKT_SIZE, "");
@@ -277,7 +277,7 @@ static inline char* knet_encode_packet(char* p, const KNetProbeAck& pkt)
 {
 	p = ikcp_encode64s(p, pkt.result);
 	p = ikcp_encode64s(p, pkt.client_ms);
-	p = ikcp_encode64s(p, pkt.client_seq_id);
+	p = ikcp_encode64u(p, pkt.client_seq_id);
 	p = ikcp_encode64u(p, pkt.shake_id);
 	return p;
 }
@@ -286,7 +286,7 @@ static inline const char* knet_decode_packet(const char* p, KNetProbeAck& pkt)
 {
 	p = ikcp_decode64s(p, &pkt.result);
 	p = ikcp_decode64s(p, &pkt.client_ms);
-	p = ikcp_decode64s(p, &pkt.client_seq_id);
+	p = ikcp_decode64u(p, &pkt.client_seq_id);
 	p = ikcp_decode64u(p, &pkt.shake_id);
 	return p;
 }

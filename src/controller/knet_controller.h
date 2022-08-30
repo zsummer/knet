@@ -46,16 +46,14 @@ public:
 	KNetController();
 	~KNetController();
 	s32 StartServer(const KNetConfigs& configs);
-
-	
 	s32 StartConnect(const KNetConfigs& configs, s32& session_inst_id);
+	s32 RemoveConnect(s32 session_inst_id);
 	s32 RemoveSession(u64 shake_id, u64 session_id);
 	s32 CleanSession();
 
 	s32 DoSelect();
 	s32 Destroy();
-	virtual void OnSocketTick(KNetSocket&, s64 now_ms) override;
-	virtual void OnSocketReadable(KNetSocket&, s64 now_ms) override;
+	virtual void on_readable(KNetSocket&, s64 now_ms) override;
 	void OnPKTEcho(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 

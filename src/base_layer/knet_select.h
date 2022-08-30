@@ -38,9 +38,8 @@ using KNetSockets = zarray<KNetSocket, KNET_MAX_SOCKETS>;
 class KNetSelect
 {
 public:
-    virtual void OnSocketTick(KNetSocket&, s64 now_ms) = 0;
-    virtual void OnSocketReadable(KNetSocket&, s64 now_ms) = 0;
-    s32 Select(KNetSockets& sets, s64 wait_ms);
+    virtual void on_readable(KNetSocket&, s64 now_ms) = 0;
+    s32 do_select(KNetSockets& sets, s64 wait_ms);
 };
 
 
