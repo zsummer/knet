@@ -56,26 +56,29 @@ public:
 	s32 Destroy();
 	virtual void OnSocketTick(KNetSocket&, s64 now_ms) override;
 	virtual void OnSocketReadable(KNetSocket&, s64 now_ms) override;
-	void OnPKTEcho(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void OnPKTEcho(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 
 
 public:
 	s32 send_probe(KNetSocket& s);
 	s32 send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAddress& remote);
-	void on_probe(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
-	void on_probe_ack(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 	s32 send_ch(KNetSocket& s, KNetSession& session);
-	void on_ch(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
-	s32 send_sh(KNetSocket& s, const KNetPKTCH& ch, const KNetPKTSH& sh, KNetAddress& remote);
-	void on_sh(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	s32 send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, KNetAddress& remote);
+	void on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 	s32 send_psh(KNetSession& s, char* psh_buf, s32 len);
-	void on_psh(KNetSocket& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
-	void on_psh(KNetSession& s, KNetUHDR& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
+	s32 send_rst(KNetSession& s);
+	void on_rst(KNetSocket& s, KNetHeader& hdr, KNetAddress& remote, s64 now_ms);
+	void on_rst(KNetSession& s, KNetHeader& hdr, KNetAddress& remote, s64 now_ms);
 private:
 
 	s32 send_packet(KNetSocket&, char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
@@ -85,10 +88,10 @@ private:
 	KNetSocket* create_stream();
 	void destroy_stream(KNetSocket*);
 
-	s32 check_hdr(KNetUHDR& hdr, const char* data, s32 len);
-	s32 make_hdr(KNetUHDR& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len);
-	s32 make_hdr(KNetUHDR& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag) { return make_hdr(hdr, session_id, pkt_id, version, chl, cmd, flag, snd_data(), snd_data_len()); }
-	void write_hdr(KNetUHDR& hdr) { knet_encode_hdr(pkg_snd_, hdr); }
+	s32 check_hdr(KNetHeader& hdr, const char* data, s32 len);
+	s32 make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len);
+	s32 make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag) { return make_hdr(hdr, session_id, pkt_id, version, chl, cmd, flag, snd_data(), snd_data_len()); }
+	void write_hdr(KNetHeader& hdr) { knet_encode_hdr(pkg_snd_, hdr); }
 	void set_snd_data_offset(const char* p) { pkg_snd_offset_ = (s32)(p - pkg_snd_); }
 	s32 snd_data_len() { return pkg_snd_offset_ - KNT_UHDR_SIZE; }
 	s32 snd_len() { return pkg_snd_offset_; }

@@ -110,7 +110,7 @@ enum KNetCMD
 
 const static u32 KNT_MAX_SLOTS = 8;
 
-struct KNetUHDR
+struct KNetHeader
 {
 	static const u32 HDR_SIZE = 8 * 4;
 	u64 session_id;
@@ -123,13 +123,13 @@ struct KNetUHDR
 	u8 slot;
 	u64 mac;
 };
-static_assert(sizeof(KNetUHDR) == KNetUHDR::HDR_SIZE, "hdr size is 32");
-static_assert(sizeof(KNetUHDR) % 8 == 0, "");
+static_assert(sizeof(KNetHeader) == KNetHeader::HDR_SIZE, "hdr size is 32");
+static_assert(sizeof(KNetHeader) % 8 == 0, "");
 
-static const u32 KNT_UHDR_SIZE = KNetUHDR::HDR_SIZE;
+static const u32 KNT_UHDR_SIZE = KNetHeader::HDR_SIZE;
 static const u32 KNT_UDAT_SIZE = KNT_UPKT_SIZE - KNT_UHDR_SIZE - (KNT_UPKT_SIZE - KNT_UHDR_SIZE)%16;
 
-static inline char* knet_encode_hdr(char* p, const KNetUHDR& hdr)
+static inline char* knet_encode_hdr(char* p, const KNetHeader& hdr)
 {
 	p = ikcp_encode64u(p, hdr.session_id);
 	p = ikcp_encode64u(p, hdr.pkt_id);
@@ -143,7 +143,7 @@ static inline char* knet_encode_hdr(char* p, const KNetUHDR& hdr)
 	return p;
 }
 
-static inline const char* knet_decode_hdr(const char* p, KNetUHDR& hdr)
+static inline const char* knet_decode_hdr(const char* p, KNetHeader& hdr)
 {
 	p = ikcp_decode64u(p, &hdr.session_id);
 	p = ikcp_decode64u(p, &hdr.pkt_id);
@@ -158,7 +158,7 @@ static inline const char* knet_decode_hdr(const char* p, KNetUHDR& hdr)
 }
 
 
-static inline u64 knet_encode_pkt_mac(const char* data, s32 len,  KNetUHDR& hdr, const char* box = NULL)
+static inline u64 knet_encode_pkt_mac(const char* data, s32 len,  KNetHeader& hdr, const char* box = NULL)
 {
 	u64 mac = hdr.session_id;
 	static const u64 h = (0x84222325ULL << 32) | 0xcbf29ce4ULL;
@@ -296,7 +296,7 @@ static inline const char* knet_decode_packet(const char* p, KNetProbeAck& pkt)
 
 
 
-struct KNetPKTCH
+struct KNetCH
 {
 	static const u32 PKT_SIZE = 8 + 8 + 16*2 + KNetDeviceInfo::PKT_SIZE + 400;
 	u64 shake_id;
@@ -306,10 +306,10 @@ struct KNetPKTCH
 	KNetDeviceInfo dvi;
 	char noise[400];
 };
-static_assert(KNetPKTCH::PKT_SIZE < KNT_UDAT_SIZE&& KNetPKTCH::PKT_SIZE> 1200, "");
-static_assert(sizeof(KNetPKTCH) == KNetPKTCH::PKT_SIZE, "");
+static_assert(KNetCH::PKT_SIZE < KNT_UDAT_SIZE&& KNetCH::PKT_SIZE> 1200, "");
+static_assert(sizeof(KNetCH) == KNetCH::PKT_SIZE, "");
 
-static inline char* knet_encode_packet(char* p, const KNetPKTCH& pkt)
+static inline char* knet_encode_packet(char* p, const KNetCH& pkt)
 {
 	p = ikcp_encode64u(p, pkt.shake_id);
 	p = ikcp_encode64u(p, pkt.session_id);
@@ -320,7 +320,7 @@ static inline char* knet_encode_packet(char* p, const KNetPKTCH& pkt)
 	return p;
 }
 
-static inline const char* knet_decode_packet(const char* p, KNetPKTCH& pkt)
+static inline const char* knet_decode_packet(const char* p, KNetCH& pkt)
 {
 	p = ikcp_decode64u(p, &pkt.shake_id);
 	p = ikcp_decode64u(p, &pkt.session_id);
@@ -334,7 +334,7 @@ static inline const char* knet_decode_packet(const char* p, KNetPKTCH& pkt)
 
 
 
-struct KNetPKTSH
+struct KNetSH
 {
 	static const u32 PKT_SIZE = 4+4+8+8+16*2;
 	s32 result;
@@ -344,9 +344,9 @@ struct KNetPKTSH
 	char sg[16];
 	char sp[16];
 };
-static_assert(sizeof(KNetPKTSH) == KNetPKTSH::PKT_SIZE, "");
+static_assert(sizeof(KNetSH) == KNetSH::PKT_SIZE, "");
 
-static inline char* knet_encode_packet(char* p, const KNetPKTSH& pkt)
+static inline char* knet_encode_packet(char* p, const KNetSH& pkt)
 {
 	p = ikcp_encode32u(p, pkt.result);
 	p = ikcp_encode32u(p, pkt.noise);
@@ -357,7 +357,7 @@ static inline char* knet_encode_packet(char* p, const KNetPKTSH& pkt)
 	return p;
 }
 
-static inline const char* knet_decode_packet(const char* p, KNetPKTSH& pkt)
+static inline const char* knet_decode_packet(const char* p, KNetSH& pkt)
 {
 	p = ikcp_decode32u(p, (u32*)&pkt.result);
 	p = ikcp_decode32u(p, (u32*)&pkt.noise);
@@ -368,12 +368,6 @@ static inline const char* knet_decode_packet(const char* p, KNetPKTSH& pkt)
 	return p;
 }
 
-
-struct KNetPKTPSH
-{
-	static const u32 PKT_SIZE = 0;
-};
-static_assert(KNetPKTPSH::PKT_SIZE < KNT_UDAT_SIZE, "");
 
 
 
