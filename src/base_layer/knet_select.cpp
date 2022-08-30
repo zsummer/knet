@@ -35,6 +35,7 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 	fd_set rdfds;
 	FD_ZERO(&rdfds);
 	SOCKET max_fd = -1; //windows is error but will ignore
+	s32 set_cnt = 0;
 	for (auto& s : sets)
 	{
 		if (s.state_ < KNTS_BINDED || s.state_ >= KNTS_LINGER)
@@ -52,9 +53,13 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 			max_fd = s.skt_;
 		}
 		FD_SET(s.skt_, &rdfds);
+		set_cnt++;
 	}
 
-
+	if (set_cnt == 0)
+	{
+		return 0;
+	}
 
 	s32 ret = select(max_fd + 1, &rdfds, NULL, NULL, &tv);
 	if (ret < 0)

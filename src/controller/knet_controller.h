@@ -48,8 +48,7 @@ public:
 	s32 start_server(const KNetConfigs& configs);
 	s32 start_connect(const KNetConfigs& configs, s32& session_inst_id);
 	s32 remove_connect(s32 session_inst_id);
-
-	s32 remove_session(u64 shake_id, u64 session_id);
+	s32 remove_session(s32 inst_id);
 	s32 clean_session();
 
 	s32 do_tick();

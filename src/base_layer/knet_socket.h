@@ -209,6 +209,7 @@ public:
         reset_probe();
     }
     bool is_server() const { return flag_ & KNTS_SERVER; }
+
     s32 inst_id_;
     u8  slot_id_;
     s32 refs_;

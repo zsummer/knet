@@ -40,6 +40,7 @@ s32 KNetSession::init()
 		return -1;
 	}
 	state_ = KNTS_LOCAL_INITED;
+	flag_ = 0;
 	session_id_ = 0;
 	shake_id_ = 0;
 	snd_pkt_id_ = 0;

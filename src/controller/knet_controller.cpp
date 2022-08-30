@@ -164,6 +164,7 @@ s32 KNetController::start_connect(const KNetConfigs& configs, s32& session_inst_
 			session = create_session();
 			session_inst_id = session->inst_id_;
 			session->init();
+			session->flag_ = KNTS_CLINET;
 		}
 		ns->client_session_inst_id_ = session_inst_id;
 		KNetSocketSlot slot;
@@ -419,6 +420,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS)++;
 	KNetSession* session = create_session();
 	session->init();
+	session->flag_ = KNTS_SERVER;
 	session->shake_id_ = ch.shake_id;
 	session->session_id_ = ch.shake_id;
 	session->slots_[hdr.slot].inst_id_ = s.inst_id_;
@@ -672,17 +674,17 @@ s32 KNetController::clean_session()
 	//clean session
 	while (!handshakes_s_.empty())
 	{
-		remove_session(handshakes_s_.begin()->second->shake_id_, 0);
+		remove_session(handshakes_s_.begin()->second->inst_id_);
 	}
 
 	while (!establisheds_c_.empty())
 	{
-		remove_session(establisheds_c_.begin()->second->shake_id_, establisheds_c_.begin()->second->session_id_);
+		remove_session(establisheds_c_.begin()->second->inst_id_);
 	}
 
 	while (!establisheds_s_.empty())
 	{
-		remove_session(establisheds_s_.begin()->second->shake_id_, establisheds_s_.begin()->second->session_id_);
+		remove_session(establisheds_s_.begin()->second->inst_id_);
 	}
 	for (auto& s : nss_)
 	{
@@ -696,59 +698,59 @@ s32 KNetController::clean_session()
 
 s32 KNetController::remove_connect(s32 session_inst_id)
 {
-	if (session_inst_id >= (s32)sessions_.size() || session_inst_id < 0)
+	return remove_session(session_inst_id);
+}
+
+
+
+
+s32 KNetController::remove_session(s32 inst_id)
+{
+	if (inst_id < 0 || inst_id >= (s32)sessions_.size())
 	{
 		return -1;
 	}
-	return remove_session(sessions_[session_inst_id].shake_id_, sessions_[session_inst_id].session_id_);
+	
+	KNetSession& session = sessions_[inst_id];
+	if (session.state_ == KNTS_NONE)
+	{
+		return -2;
+	}
+
+	for (auto& slot: session.slots_)
+	{
+		if (slot.inst_id_ == -1)
+		{
+			continue;
+		}
+		if (slot.inst_id_ >= (s32)nss_.size())
+		{
+			LogError() << "error";
+			continue;
+		}
+		KNetSocket& s = nss_[slot.inst_id_];
+		if (s.refs_ <= 0)
+		{
+			LogError() << "error";
+			continue;
+		}
+		s.refs_--;
+		s.client_session_inst_id_ = -1;
+		slot.inst_id_ = -1;
+	}
+	session.state_ = KNTS_LINGER;
+	if (session.flag_ & KNTS_CLINET)
+	{
+		establisheds_c_.erase(session.session_id_);
+	}
+	else if (session.flag_ & KNTS_SERVER)
+	{
+		handshakes_s_.erase(session.shake_id_);
+		establisheds_s_.erase(session.session_id_);
+	}
+	return 0;
 }
 
-
-
-s32 KNetController::remove_session(u64 shake_id, u64 session_id)
-{
-	KNetSession* session = NULL;
-	if (true)
-	{
-		auto iter = handshakes_s_.find(shake_id);
-		if (iter != handshakes_s_.end())
-		{
-			session = iter->second;
-			handshakes_s_.erase(iter);
-		}
-	}
-
-
-	if (true)
-	{
-		auto iter = establisheds_c_.find(session_id);
-		if (iter != establisheds_c_.end())
-		{
-			if (session != NULL)
-			{
-				KNetEnv::error_count()++;
-			}
-			session = iter->second;
-			establisheds_c_.erase(iter);
-		}
-	}
-
-	if (true)
-	{
-		auto iter = establisheds_s_.find(session_id);
-		if (iter != establisheds_s_.end())
-		{
-			if (session != NULL)
-			{
-				KNetEnv::error_count()++;
-			}
-			session = iter->second;
-			establisheds_s_.erase(iter);
-		}
-	}
-
-	return destroy_session(session);
-}
 
 
 KNetSession* KNetController::create_session()
