@@ -58,7 +58,7 @@ public:
 	~KNetSession();
 	s32 reset();
 	s32 init(KNetController& c);
-
+	s32 on_tick(s64 now_ms);
 public:
 	s32 inst_id_;
 	u16 state_;

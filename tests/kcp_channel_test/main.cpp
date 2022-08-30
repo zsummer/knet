@@ -87,7 +87,7 @@ int main()
 		{
 			LogError() << "select error";
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	
 	controller.send_kcp_data(*session, "12345", 6, KNetEnv::now_ms()); 
@@ -98,11 +98,11 @@ int main()
 		{
 			LogError() << "select error";
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
 
-	controller.send_rst(*session);
+	controller.remove_session_with_rst(session->inst_id_);
 	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller.do_tick();
@@ -110,7 +110,7 @@ int main()
 		{
 			LogError() << "select error";
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
 
@@ -122,7 +122,7 @@ int main()
 		{
 			LogError() << "select error";
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");

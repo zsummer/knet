@@ -89,7 +89,10 @@ s32 KNetSession::init(KNetController& c)
 	//kcp_->logmask = (IKCP_LOG_OUT_WINS << 1) - 1;
 	return 0;
 }
-
+s32 KNetSession::on_tick(s64 now_ms)
+{
+	return 0;
+}
 
 
 
