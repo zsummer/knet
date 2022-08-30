@@ -45,16 +45,18 @@ class KNetController: public KNetSelect
 public:
 	KNetController();
 	~KNetController();
-	s32 StartServer(const KNetConfigs& configs);
-	s32 StartConnect(const KNetConfigs& configs, s32& session_inst_id);
-	s32 RemoveConnect(s32 session_inst_id);
-	s32 RemoveSession(u64 shake_id, u64 session_id);
-	s32 CleanSession();
+	s32 start_server(const KNetConfigs& configs);
+	s32 start_connect(const KNetConfigs& configs, s32& session_inst_id);
+	s32 remove_connect(s32 session_inst_id);
 
-	s32 DoSelect();
-	s32 Destroy();
+	s32 remove_session(u64 shake_id, u64 session_id);
+	s32 clean_session();
+
+	s32 do_tick();
+	s32 destroy();
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
-	void OnPKTEcho(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+
+	void on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 
 

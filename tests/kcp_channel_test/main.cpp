@@ -34,7 +34,7 @@ s32 test_socket_bind2()
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0});
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 	KNetController controller;
-	s32 ret = controller.StartServer(mc);
+	s32 ret = controller.start_server(mc);
 	KNetAssert(ret == 0, "");
 
 	KNetSocket s1(1);
@@ -44,7 +44,7 @@ s32 test_socket_bind2()
 	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
 
-	controller.Destroy();
+	controller.destroy();
 	ret = s1.init("127.0.0.1", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
 	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);
@@ -70,19 +70,19 @@ int main()
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 	KNetController controller;
-	s32 ret = controller.StartServer(mc);
+	s32 ret = controller.start_server(mc);
 	KNetAssert(ret == 0, "");
 
 	mc.clear();
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
 	s32 session_inst_id = 0;
-	ret = controller.StartConnect(mc, session_inst_id);
+	ret = controller.start_connect(mc, session_inst_id);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 100; i++)
 	{
-		ret = controller.DoSelect();
+		ret = controller.do_tick();
 		if (ret != 0)
 		{
 			LogError() << "select error";
@@ -90,10 +90,10 @@ int main()
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	controller.Destroy();
+	controller.destroy();
 	for (size_t i = 0; i < 10; i++)
 	{
-		ret = controller.DoSelect();
+		ret = controller.do_tick();
 		if (ret != 0)
 		{
 			LogError() << "select error";

@@ -78,7 +78,7 @@ void KNetController::on_readable(KNetSocket& s, s64 now_ms)
 		on_rst(s, uhdr, remote, now_ms);
 		break;
 	case KNETCMD_ECHO:
-		OnPKTEcho(s, uhdr, p, len - KNetHeader::HDR_SIZE, remote, now_ms);
+		on_echo(s, uhdr, p, len - KNetHeader::HDR_SIZE, remote, now_ms);
 		break;
 	default:
 		break;
@@ -92,7 +92,7 @@ void KNetController::on_readable(KNetSocket& s, s64 now_ms)
 
 
 
-void KNetController::OnPKTEcho(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetController::on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	if (pkg[len - 1] != '\0')
 	{
@@ -113,16 +113,16 @@ void KNetController::OnPKTEcho(KNetSocket& s, KNetHeader& hdr, const char* pkg, 
 
 
 
-s32 KNetController::Destroy()
+s32 KNetController::destroy()
 {
-	CleanSession();
+	clean_session();
 
 	return 0;
 }
 
 
 
-s32 KNetController::StartConnect(const KNetConfigs& configs, s32& session_inst_id)
+s32 KNetController::start_connect(const KNetConfigs& configs, s32& session_inst_id)
 {
 	u32 has_error = 0;
 	session_inst_id = -1;
@@ -667,22 +667,22 @@ s32 KNetController::make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 ve
 
 
 
-s32 KNetController::CleanSession()
+s32 KNetController::clean_session()
 {
 	//clean session
 	while (!handshakes_s_.empty())
 	{
-		RemoveSession(handshakes_s_.begin()->second->shake_id_, 0);
+		remove_session(handshakes_s_.begin()->second->shake_id_, 0);
 	}
 
 	while (!establisheds_c_.empty())
 	{
-		RemoveSession(establisheds_c_.begin()->second->shake_id_, establisheds_c_.begin()->second->session_id_);
+		remove_session(establisheds_c_.begin()->second->shake_id_, establisheds_c_.begin()->second->session_id_);
 	}
 
 	while (!establisheds_s_.empty())
 	{
-		RemoveSession(establisheds_s_.begin()->second->shake_id_, establisheds_s_.begin()->second->session_id_);
+		remove_session(establisheds_s_.begin()->second->shake_id_, establisheds_s_.begin()->second->session_id_);
 	}
 	for (auto& s : nss_)
 	{
@@ -694,18 +694,18 @@ s32 KNetController::CleanSession()
 
 
 
-s32 KNetController::RemoveConnect(s32 session_inst_id)
+s32 KNetController::remove_connect(s32 session_inst_id)
 {
 	if (session_inst_id >= (s32)sessions_.size() || session_inst_id < 0)
 	{
 		return -1;
 	}
-	return RemoveSession(sessions_[session_inst_id].shake_id_, sessions_[session_inst_id].session_id_);
+	return remove_session(sessions_[session_inst_id].shake_id_, sessions_[session_inst_id].session_id_);
 }
 
 
 
-s32 KNetController::RemoveSession(u64 shake_id, u64 session_id)
+s32 KNetController::remove_session(u64 shake_id, u64 session_id)
 {
 	KNetSession* session = NULL;
 	if (true)
@@ -809,7 +809,7 @@ s32 KNetController::destroy_session(KNetSession* session)
 	return 0;
 }
 
-s32 KNetController::StartServer(const KNetConfigs& configs)
+s32 KNetController::start_server(const KNetConfigs& configs)
 {
 	bool has_error = false;
 	for (auto& c : configs)
@@ -838,7 +838,7 @@ s32 KNetController::StartServer(const KNetConfigs& configs)
 
 	if (has_error)
 	{
-		Destroy();
+		destroy();
 		return -1;
 	}
 	return 0;
@@ -846,7 +846,7 @@ s32 KNetController::StartServer(const KNetConfigs& configs)
 
 
 
-s32 KNetController::DoSelect()
+s32 KNetController::do_tick()
 {
 	return do_select(nss_, 0);
 }
