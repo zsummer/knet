@@ -152,8 +152,7 @@ public:
     {
         if (state_ == KNTS_INVALID)
         {
-            KNetEnv::error_count()++;
-            return -1;
+            return 0;
         }
 
         if (refs_ > 0 && !(flag_ & KNTS_SERVER))

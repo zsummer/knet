@@ -49,13 +49,16 @@ struct KNetSocketSlot
 	s64 last_active_;
 };
 
+class KNetController;
+
 class KNetSession
 {
 public:
 	KNetSession(s32 inst_id);
 	~KNetSession();
-	s32 init();
-	s32 destroy();
+	s32 reset();
+	s32 init(KNetController& c);
+
 public:
 	s32 inst_id_;
 	u16 state_;
@@ -63,6 +66,7 @@ public:
 	u64 session_id_;
 	u64 shake_id_;
 	u64 snd_pkt_id_;
+	ikcpcb* kcp_;
 
 	std::string encrypt_key;
 	KNetConfigs configs_;

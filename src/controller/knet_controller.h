@@ -46,18 +46,28 @@ public:
 	KNetController();
 	~KNetController();
 	s32 start_server(const KNetConfigs& configs);
-	s32 start_connect(const KNetConfigs& configs, s32& session_inst_id);
+	s32 start_connect(const KNetConfigs& configs, KNetSession*& session);
 	s32 remove_connect(s32 session_inst_id);
 	s32 remove_session(s32 inst_id);
 	s32 clean_session();
 
 	s32 do_tick();
+
+
 	s32 destroy();
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
+
 
 	void on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 
+
+public:
+	void send_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms);
+	void on_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms);
+
+	static int kcp_output(const char* buf, int len, ikcpcb* kcp, void* user);
+	static void kcp_writelog(const char* log, struct IKCPCB* kcp, void* user);
 
 public:
 	s32 send_probe(KNetSocket& s);
@@ -71,13 +81,14 @@ public:
 	s32 send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, KNetAddress& remote);
 	void on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
-	s32 send_psh(KNetSession& s, char* psh_buf, s32 len);
+	s32 send_psh(KNetSession& s, const char* psh_buf, s32 len);
 	void on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 	void on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 	s32 send_rst(KNetSession& s);
 	void on_rst(KNetSocket& s, KNetHeader& hdr, KNetAddress& remote, s64 now_ms);
 	void on_rst(KNetSession& s, KNetHeader& hdr, KNetAddress& remote, s64 now_ms);
+
 private:
 
 	s32 send_packet(KNetSocket&, char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
@@ -99,6 +110,7 @@ private:
 	char* rcv_head() { return pkg_rcv_; }
 	char* rcv_data() { return pkg_rcv_ + KNT_UHDR_SIZE; }
 private:
+	u32  tick_cnt_;
 	u32 controller_state_;
 	KNetSockets nss_;
 	KNetSessions sessions_;

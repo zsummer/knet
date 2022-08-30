@@ -76,11 +76,11 @@ int main()
 	mc.clear();
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
-	s32 session_inst_id = 0;
-	ret = controller.start_connect(mc, session_inst_id);
+	KNetSession* session = NULL;
+	ret = controller.start_connect(mc, session);
 	KNetAssert(ret == 0, "");
 
-	for (size_t i = 0; i < 100; i++)
+	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller.do_tick();
 		if (ret != 0)
@@ -89,6 +89,30 @@ int main()
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
+	
+	controller.send_kcp_data(*session, "12345", 6, KNetEnv::now_ms()); 
+	for (size_t i = 0; i < 10; i++)
+	{
+		ret = controller.do_tick();
+		if (ret != 0)
+		{
+			LogError() << "select error";
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+
+	controller.send_rst(*session);
+	for (size_t i = 0; i < 10; i++)
+	{
+		ret = controller.do_tick();
+		if (ret != 0)
+		{
+			LogError() << "select error";
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
 
 	controller.destroy();
 	for (size_t i = 0; i < 10; i++)

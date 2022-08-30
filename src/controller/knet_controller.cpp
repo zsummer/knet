@@ -25,6 +25,7 @@
 KNetController::KNetController()
 {
 	controller_state_ = 0;
+	tick_cnt_ = 0;
 }
 
 KNetController::~KNetController()
@@ -121,12 +122,9 @@ s32 KNetController::destroy()
 }
 
 
-
-s32 KNetController::start_connect(const KNetConfigs& configs, s32& session_inst_id)
+s32 KNetController::start_connect(const KNetConfigs& configs, KNetSession* &session)
 {
 	u32 has_error = 0;
-	session_inst_id = -1;
-	KNetSession* session = NULL;
 	if (sessions_.full())
 	{
 		KNetEnv::error_count()++;
@@ -159,14 +157,13 @@ s32 KNetController::start_connect(const KNetConfigs& configs, s32& session_inst_
 		ns->state_ = KNTS_BINDED;
 		ns->slot_id_ = i;
 		ns->flag_ |= KNTS_CLINET;
-		if (session_inst_id == -1)
+		if (session == NULL)
 		{
 			session = create_session();
-			session_inst_id = session->inst_id_;
-			session->init();
+			session->init(*this);
 			session->flag_ = KNTS_CLINET;
 		}
-		ns->client_session_inst_id_ = session_inst_id;
+		ns->client_session_inst_id_ = session->inst_id_;
 		KNetSocketSlot slot;
 		slot.inst_id_ = ns->inst_id_;
 		slot.last_active_ = KNetEnv::now_ms();
@@ -188,6 +185,41 @@ s32 KNetController::start_connect(const KNetConfigs& configs, s32& session_inst_
 	}
 	return 0;
 }
+
+
+
+
+
+
+int KNetController::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user)
+{
+	std::pair<s32, KNetController*>* data = (std::pair<s32, KNetController*>*) user;
+	if (data == NULL)
+	{
+		return -1;
+	}
+
+	s32 inst_id = data->first;
+	KNetController* controller = data->second;
+
+	if (inst_id < 0 || inst_id >= (s32)controller->sessions_.size())
+	{
+		return -2;
+	}
+
+	s32 ret = controller->send_psh(controller->sessions_[inst_id], buf, len);
+	return ret;
+}
+
+void KNetController::kcp_writelog(const char* log, struct IKCPCB* kcp, void* user)
+{
+
+}
+
+
+
+
+
 
 
 s32 KNetController::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
@@ -419,7 +451,8 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 
 	KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS)++;
 	KNetSession* session = create_session();
-	session->init();
+	session->init(*this);
+	session->state_ = KNTS_ESTABLISHED;
 	session->flag_ = KNTS_SERVER;
 	session->shake_id_ = ch.shake_id;
 	session->session_id_ = ch.shake_id;
@@ -486,11 +519,11 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	}
 
 	LogInfo() << "client established sucess";
-	send_psh(session, "123", 4);
+	//send_psh(session, "123", 4);
 }
 
 
-s32 KNetController::send_psh(KNetSession& s, char* psh_buf, s32 len)
+s32 KNetController::send_psh(KNetSession& s, const char* psh_buf, s32 len)
 {
 	KNetHeader hdr;
 	memcpy(snd_data(), psh_buf, len);
@@ -547,6 +580,7 @@ void KNetController::on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32
 
 void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
+	ikcp_input(s.kcp_, pkg, len);
 	LogDebug() << "session on psh";
 }
 
@@ -737,6 +771,10 @@ s32 KNetController::remove_session(s32 inst_id)
 		s.refs_--;
 		s.client_session_inst_id_ = -1;
 		slot.inst_id_ = -1;
+		if (s.refs_ == 0)
+		{
+			s.destroy();
+		}
 	}
 	session.state_ = KNTS_LINGER;
 	if (session.flag_ & KNTS_CLINET)
@@ -807,7 +845,7 @@ s32 KNetController::destroy_session(KNetSession* session)
 		skt.refs_--;
 	}
 	KNetEnv::prof(KNT_STT_SES_DESTROY_EVENTS)++;
-	session->destroy();
+	session->state_ = KNTS_LINGER;
 	return 0;
 }
 
@@ -850,7 +888,44 @@ s32 KNetController::start_server(const KNetConfigs& configs)
 
 s32 KNetController::do_tick()
 {
-	return do_select(nss_, 0);
+	tick_cnt_++;
+
+	s32 ret = do_select(nss_, 0);
+	for (auto&session : establisheds_s_)
+	{
+		if (session.second->state_ == KNTS_ESTABLISHED)
+		{
+			ikcp_update(session.second->kcp_, tick_cnt_ * 10);
+			s32 len = ikcp_recv(session.second->kcp_, pkg_rcv_, KNT_UPKT_SIZE);
+			if (len > 0)
+			{
+				on_kcp_data(*session.second, pkg_rcv_, len, KNetEnv::now_ms());
+			}
+		}
+	}
+	for (auto& session : establisheds_c_)
+	{
+		if (session.second->state_ == KNTS_ESTABLISHED)
+		{
+			ikcp_update(session.second->kcp_, tick_cnt_ * 10);
+			s32 len = ikcp_recv(session.second->kcp_, pkg_rcv_, KNT_UPKT_SIZE);
+			if (len > 0)
+			{
+				on_kcp_data(*session.second, pkg_rcv_, len, KNetEnv::now_ms());
+			}
+		}
+	}
+	return 0;
+}
+
+void KNetController::on_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms)
+{
+	LogDebug() << "recv kcp data:" << data;
+}
+
+void KNetController::send_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms)
+{
+	ikcp_send(s.kcp_, data, len);
 }
 
 

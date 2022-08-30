@@ -17,12 +17,13 @@
 */
 
 #include "knet_session.h"
+#include "knet_controller.h"
 
 KNetSession::KNetSession(s32 inst_id)
 {
     inst_id_ = inst_id;
     state_ = KNTS_INVALID;
-	init();
+	reset();
 }
 
 
@@ -30,10 +31,14 @@ KNetSession::KNetSession(s32 inst_id)
 
 KNetSession::~KNetSession()
 {
-
+	if (kcp_ != NULL)
+	{
+		ikcp_release(kcp_);
+		kcp_ = NULL;
+	}
 }
 
-s32 KNetSession::init()
+s32 KNetSession::reset()
 {
 	if (state_ != KNTS_INVALID)
 	{
@@ -41,6 +46,7 @@ s32 KNetSession::init()
 	}
 	state_ = KNTS_LOCAL_INITED;
 	flag_ = 0;
+	kcp_ = 0;
 	session_id_ = 0;
 	shake_id_ = 0;
 	snd_pkt_id_ = 0;
@@ -58,19 +64,32 @@ s32 KNetSession::init()
 }
 
 
+#define KCP_UPDATE_INTERVAL 10
+#define KCP_DEFAULT_SND_WND (512)
+#define KCP_DEFAULT_RECV_WND (512)
+#define KCP_MAX_SND_WND (5120)
+#define KCP_MAX_RECV_WND (5120)
+#define KCP_FAST_MIN_RTO (50)
+#define KCP_SVR_DEFAULT_RECV_BUFF_SIZE (2048*1024)
 
-
-s32 KNetSession::destroy()
+s32 KNetSession::init(KNetController& c)
 {
-	for (auto& slot : slots_)
+	if (kcp_ != NULL)
 	{
-		if (slot.inst_id_ != -1)
-		{
-			return -1;
-		}
+		return -1;
 	}
-    state_ = KNTS_INVALID;
+	kcp_ = ikcp_create(0, (void*) new std::pair<s32, KNetController*>(inst_id_, &c));
+	ikcp_nodelay(kcp_, 1, 0, 2, 1);
+	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);
+	ikcp_wndsize(kcp_, KCP_DEFAULT_SND_WND, KCP_DEFAULT_RECV_WND);
+	kcp_->rx_minrto = KCP_FAST_MIN_RTO;
+	kcp_->output = KNetController::kcp_output;
+	kcp_->writelog = KNetController::kcp_writelog;
+	kcp_->stream = 1;
+	//kcp_->logmask = (IKCP_LOG_OUT_WINS << 1) - 1;
 	return 0;
 }
+
+
 
 
