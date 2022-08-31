@@ -191,16 +191,14 @@ s32 KNetController::start_connect(const KNetConfigs& configs, KNetSession* &sess
 
 
 
-int KNetController::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user)
+int KNetController::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id)
 {
-	std::pair<s32, KNetController*>* data = (std::pair<s32, KNetController*>*) user;
-	if (data == NULL)
+	if (user == NULL)
 	{
 		return -1;
 	}
-
-	s32 inst_id = data->first;
-	KNetController* controller = data->second;
+	KNetController* controller = (KNetController*)user;
+	s32 inst_id = user_id;
 
 	if (inst_id < 0 || inst_id >= (s32)controller->sessions_.size())
 	{
@@ -211,9 +209,9 @@ int KNetController::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user
 	return ret;
 }
 
-void KNetController::kcp_writelog(const char* log, struct IKCPCB* kcp, void* user)
+void KNetController::kcp_writelog(const char* log, struct IKCPCB* kcp, void* user, int user_id)
 {
-
+	LogDebug() << "kcp inner log:" << log;
 }
 
 

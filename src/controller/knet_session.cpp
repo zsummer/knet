@@ -78,7 +78,7 @@ s32 KNetSession::init(KNetController& c)
 	{
 		return -1;
 	}
-	kcp_ = ikcp_create(0, (void*) new std::pair<s32, KNetController*>(inst_id_, &c));
+	kcp_ = ikcp_create(0, (void*)&c, inst_id_);
 	ikcp_nodelay(kcp_, 1, 0, 2, 1);
 	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);
 	ikcp_wndsize(kcp_, KCP_DEFAULT_SND_WND, KCP_DEFAULT_RECV_WND);

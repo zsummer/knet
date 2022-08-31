@@ -306,14 +306,15 @@ struct IKCPCB
 	IUINT32 *acklist;
 	IUINT32 ackcount;
 	IUINT32 ackblock;
-	void *user;
+	void* user;
+	IINT32 user_id;
 	char *buffer;
 	int fastresend;
 	int fastlimit;
 	int nocwnd, stream;
 	int logmask;
-	int (*output)(const char *buf, int len, struct IKCPCB *kcp, void *user);
-	void (*writelog)(const char *log, struct IKCPCB *kcp, void *user);
+	int (*output)(const char *buf, int len, struct IKCPCB *kcp, void *user, IINT32 user_id);
+	void (*writelog)(const char *log, struct IKCPCB *kcp, void *user, IINT32 user_id);
 };
 
 
@@ -343,7 +344,7 @@ extern "C" {
 // create a new kcp control object, 'conv' must equal in two endpoint
 // from the same connection. 'user' will be passed to the output callback
 // output callback can be setup like this: 'kcp->output = my_udp_output'
-ikcpcb* ikcp_create(IUINT32 conv, void *user);
+ikcpcb* ikcp_create(IUINT32 conv, void *user, int user_id);
 
 // release kcp control object
 void ikcp_release(ikcpcb *kcp);

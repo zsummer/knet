@@ -117,7 +117,7 @@ void ikcp_log(ikcpcb *kcp, int mask, const char *fmt, ...)
 	va_start(argptr, fmt);
 	vsprintf(buffer, fmt, argptr);
 	va_end(argptr);
-	kcp->writelog(buffer, kcp, kcp->user);
+	kcp->writelog(buffer, kcp, kcp->user, kcp->user_id);
 }
 
 // check log mask
@@ -136,7 +136,7 @@ static int ikcp_output(ikcpcb *kcp, const void *data, int size)
 		ikcp_log(kcp, IKCP_LOG_OUTPUT, "[RO] %ld bytes", (long)size);
 	}
 	if (size == 0) return 0;
-	return kcp->output((const char*)data, size, kcp, kcp->user);
+	return kcp->output((const char*)data, size, kcp, kcp->user, kcp->user_id);
 }
 
 // output queue
@@ -158,12 +158,13 @@ void ikcp_qprint(const char *name, const struct IQUEUEHEAD *head)
 //---------------------------------------------------------------------
 // create a new kcpcb
 //---------------------------------------------------------------------
-ikcpcb* ikcp_create(IUINT32 conv, void *user)
+ikcpcb* ikcp_create(IUINT32 conv, void *user,  int user_id)
 {
 	ikcpcb *kcp = (ikcpcb*)ikcp_malloc(sizeof(struct IKCPCB));
 	if (kcp == NULL) return NULL;
 	kcp->conv = conv;
 	kcp->user = user;
+	kcp->user_id = user_id;
 	kcp->snd_una = 0;
 	kcp->snd_nxt = 0;
 	kcp->rcv_nxt = 0;
@@ -273,7 +274,7 @@ void ikcp_release(ikcpcb *kcp)
 // set output callback, which will be invoked by kcp
 //---------------------------------------------------------------------
 void ikcp_setoutput(ikcpcb *kcp, int (*output)(const char *buf, int len,
-	ikcpcb *kcp, void *user))
+	ikcpcb *kcp, void *user, int user_id))
 {
 	kcp->output = output;
 }
