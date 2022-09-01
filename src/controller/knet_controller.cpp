@@ -194,7 +194,6 @@ s32 KNetController::stop()
 
 s32 KNetController::create_connect(const KNetConfigs& configs, KNetSession* &session)
 {
-	u32 has_error = 0;
 	if (sessions_.full())
 	{
 		KNetEnv::error_count()++;
@@ -369,6 +368,7 @@ s32 KNetController::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& 
 s32  KNetController::send_probe(KNetSocket& s)
 {
 	KNetHeader hdr;
+	hdr.reset();
 	KNetProbe probe;
 	KNetEnv::fill_device_info(probe.dvi);
 	probe.client_ms = KNetEnv::now_ms();
@@ -410,6 +410,7 @@ void KNetController::on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s
 s32 KNetController::send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAddress& remote)
 {
 	KNetHeader hdr;
+	hdr.reset();
 	KNetProbeAck ack;
 	ack.result = 0;
 	ack.client_ms = probe.client_ms;
@@ -506,6 +507,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 s32 KNetController::send_ch(KNetSocket& s, KNetSession& session)
 {
 	KNetHeader hdr;
+	hdr.reset();
 	KNetCH ch;
 	memset(&ch, 0, sizeof(ch));
 	KNetEnv::fill_device_info(ch.dvi);
@@ -618,6 +620,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 s32 KNetController::send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, KNetAddress& remote)
 {
 	KNetHeader hdr;
+	hdr.reset();
 	set_snd_data_offset(knet_encode_packet(snd_data(), sh));
 	make_hdr(hdr, sh.session_id, 0, 0, 0, KNETCMD_SH, 0);
 	write_hdr(hdr);
@@ -663,6 +666,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 s32 KNetController::send_psh(KNetSession& s, const char* psh_buf, s32 len)
 {
 	KNetHeader hdr;
+	hdr.reset();
 	memcpy(snd_data(), psh_buf, len);
 	set_snd_data_offset(snd_data() + len);
 	make_hdr(hdr, s.session_id_, ++s.snd_pkt_id_, 0, 0, KNETCMD_PSH, 0);
@@ -732,10 +736,10 @@ void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s3
 s32 KNetController::send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote)
 {
 	KNetHeader hdr;
+	hdr.reset();
 	set_snd_data_offset(snd_data());
 	make_hdr(hdr, session_id, 0, 0, 0, KNETCMD_RST, 0);
 	write_hdr(hdr);
-	s32 send_cnt = 0;
 	send_packet(s, snd_head(), snd_len(), remote, KNetEnv::now_ms());
 	return 0;
 }
@@ -743,6 +747,7 @@ s32 KNetController::send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote)
 s32 KNetController::send_rst(KNetSession& s)
 {
 	KNetHeader hdr;
+	hdr.reset();
 	set_snd_data_offset(snd_data());
 	make_hdr(hdr, s.session_id_, ++s.snd_pkt_id_, 0, 0, KNETCMD_RST, 0);
 	write_hdr(hdr);
@@ -1084,6 +1089,10 @@ s32 KNetController::do_tick()
 	}
 
 	s32 ret = do_select(nss_, 0);
+	if (ret != 0)
+	{
+		LogError() << "errro";
+	}
 	for (auto& session : sessions_)
 	{
 		if (session.state_ == KNTS_LINGER)

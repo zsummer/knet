@@ -122,6 +122,8 @@ struct KNetHeader
 	u8 flag;
 	u8 slot;
 	u64 mac;
+
+	void reset() { memset(this, 0, sizeof(*this)); }
 };
 static_assert(sizeof(KNetHeader) == KNetHeader::HDR_SIZE, "hdr size is 32");
 static_assert(sizeof(KNetHeader) % 8 == 0, "");
