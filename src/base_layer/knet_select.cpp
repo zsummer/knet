@@ -30,8 +30,6 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 	tv.tv_sec = 0;
 	tv.tv_usec = (int)wait_ms * 1000;
 
-	s64 enter_now_ms = KNetEnv::now_ms();
-
 	fd_set rdfds;
 	FD_ZERO(&rdfds);
 	SOCKET max_fd = -1; //windows is error but will ignore

@@ -182,7 +182,7 @@ struct KNetAddress
 
     s32 reset_from_socket(SOCKET s)
     {
-        int len = sizeof(real_addr_);
+        socklen_t len = sizeof(real_addr_);
         int ret = getsockname(s, &real_addr_.in, &len);
         format();
         return ret;
@@ -232,29 +232,7 @@ struct KNetAddress
 
 
 
-    void fill_cmsghdr(cmsghdr* cmsg) const
-    {
-#if defined(__linux__) || defined(__ANDROID__)
-        if (family() == AF_INET4)
-        {
-            cmsg->cmsg_level = IPPROTO_IP;
-            cmsg->cmsg_type = IP_PKTINFO;
-            cmsg->cmsg_len = CMSG_LEN(sizeof(in_pktinfo));
-            auto pkt_info = (in_pktinfo*)CMSG_DATA(cmsg);
-            ::memset(pkt_info, 0, cmsg->cmsg_len);
-            pkt_info->ipi_spec_dst = real_addr_.in4.in_addr_;
-        }
-        else if (family() == AF_INET6)
-        {
-            cmsg->cmsg_level = IPPROTO_IPV6;
-            cmsg->cmsg_type = IPV6_PKTINFO;
-            cmsg->cmsg_len = CMSG_LEN(sizeof(in6_pktinfo));
-            auto pkt_info = (in6_pktinfo*)CMSG_DATA(cmsg);
-            ::memset(pkt_info, 0, cmsg->cmsg_len);
-            pkt_info->ipi6_addr = real_addr_.in6.in6_addr_;
-        }
-#endif
-    }
+
 };
 
 

@@ -38,7 +38,7 @@ struct KNetConfig
 };
 
 
-static const u32 MAX_SESSION_CONFIGS = KNT_MAX_SLOTS;
+static const s32 MAX_SESSION_CONFIGS = KNT_MAX_SLOTS;
 using KNetConfigs = zarray<KNetConfig, MAX_SESSION_CONFIGS>;
 
 
@@ -80,7 +80,7 @@ public:
 	std::array<KNetSocketSlot, KNT_MAX_SLOTS> slots_;
 };
 
-static const u32 KNT_SESSION_SIZE = sizeof(KNetSession);
+static const s32 KNT_SESSION_SIZE = sizeof(KNetSession);
 
 
 

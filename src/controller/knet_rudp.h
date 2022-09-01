@@ -112,7 +112,7 @@ const static u32 KNT_MAX_SLOTS = 8;
 
 struct KNetHeader
 {
-	static const u32 HDR_SIZE = 8 * 4;
+	static const s32 HDR_SIZE = 8 * 4;
 	u64 session_id;
 	u64 pkt_id;
 	u16 pkt_size;
@@ -126,8 +126,8 @@ struct KNetHeader
 static_assert(sizeof(KNetHeader) == KNetHeader::HDR_SIZE, "hdr size is 32");
 static_assert(sizeof(KNetHeader) % 8 == 0, "");
 
-static const u32 KNT_UHDR_SIZE = KNetHeader::HDR_SIZE;
-static const u32 KNT_UDAT_SIZE = KNT_UPKT_SIZE - KNT_UHDR_SIZE - (KNT_UPKT_SIZE - KNT_UHDR_SIZE)%16;
+static const s32 KNT_UHDR_SIZE = KNetHeader::HDR_SIZE;
+static const s32 KNT_UDAT_SIZE = KNT_UPKT_SIZE - KNT_UHDR_SIZE - (KNT_UPKT_SIZE - KNT_UHDR_SIZE)%16;
 
 static inline char* knet_encode_hdr(char* p, const KNetHeader& hdr)
 {
@@ -234,7 +234,7 @@ static inline const char* KNetDecodeKNetDeviceInfo(const char* p, KNetDeviceInfo
 
 struct KNetProbe
 {
-	static const u32 PKT_SIZE = 8 + 8 + 8 + KNetDeviceInfo::PKT_SIZE;
+	static const s32 PKT_SIZE = 8 + 8 + 8 + KNetDeviceInfo::PKT_SIZE;
 	s64 client_ms;
 	u64 client_seq_id;
 	u64 shake_id;
@@ -264,7 +264,7 @@ static inline const char* knet_decode_packet(const char* p, KNetProbe& pkt)
 
 struct KNetProbeAck
 {
-	static const u32 PKT_SIZE = 8 * 4;
+	static const s32 PKT_SIZE = 8 * 4;
 	s64 result;
 	s64 client_ms;
 	u64 client_seq_id;
@@ -298,7 +298,7 @@ static inline const char* knet_decode_packet(const char* p, KNetProbeAck& pkt)
 
 struct KNetCH
 {
-	static const u32 PKT_SIZE = 8 + 8 + 16*2 + KNetDeviceInfo::PKT_SIZE + 400;
+	static const s32 PKT_SIZE = 8 + 8 + 16*2 + KNetDeviceInfo::PKT_SIZE + 400;
 	u64 shake_id;
 	u64 session_id;
 	char cg[16];
@@ -336,7 +336,7 @@ static inline const char* knet_decode_packet(const char* p, KNetCH& pkt)
 
 struct KNetSH
 {
-	static const u32 PKT_SIZE = 4+4+8+8+16*2;
+	static const s32 PKT_SIZE = 4+4+8+8+16*2;
 	s32 result;
 	s32 noise;
 	u64 shake_id;

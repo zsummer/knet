@@ -94,7 +94,7 @@ s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 
 void KNetController::on_readable(KNetSocket& s, s64 now_ms)
 {
-	LogDebug() << s;
+	//LogDebug() << s;
 	s32 ret = recv_one_packet(s, now_ms);
 	while (ret > 0)
 	{
@@ -763,7 +763,7 @@ void KNetController::on_rst(KNetSocket& s, KNetHeader& hdr, KNetAddress& remote,
 {
 	if (s.state_ == KNTS_RST)
 	{
-		LogDebug() << s << " arealdy in fin";
+		//LogDebug() << s << " arealdy in fin";
 		return;
 	}
 
@@ -856,6 +856,7 @@ s32 KNetController::make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 ve
 	hdr.cmd = cmd;
 	hdr.flag = flag;
 	hdr.slot = 0;
+	hdr.mac = 0;
 	switch (cmd)
 	{
 	case KNETCMD_PB:
@@ -1112,12 +1113,12 @@ s32 KNetController::do_tick()
 	return 0;
 }
 
-void KNetController::on_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms)
+void KNetController::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms)
 {
 	LogDebug() << "recv kcp data:" << data;
 }
 
-void KNetController::send_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms)
+void KNetController::send_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms)
 {
 	ikcp_send(s.kcp_, data, len);
 }

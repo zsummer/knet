@@ -25,7 +25,6 @@
 #include "knet_select.h"
 #include "knet_socket.h"
 #include "knet_session.h"
-#include "zpool.h"
 #include "knet_rudp.h"
 
 
@@ -70,8 +69,8 @@ public:
 
 
 public:
-	void send_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms);
-	void on_kcp_data(KNetSession& s, char* data, s32 len, s64 now_ms);
+	void send_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
+	void on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
 
 	static int kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id);
 	static void kcp_writelog(const char* log, struct IKCPCB* kcp, void* user, int user_id);

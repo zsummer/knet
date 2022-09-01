@@ -19,7 +19,7 @@
 #pragma once
 #ifndef _KNET_BASE_H_
 #define _KNET_BASE_H_
-#include "zallocator.h"
+
 #include "zlist_ext.h"
 #include "zarray.h"
 #include "zlist.h"
@@ -43,7 +43,7 @@ using f64 = double;
 #include <string>
 #include <map>
 #include <algorithm>
-
+#include <cstddef>
 
 
 #ifdef _WIN32
