@@ -61,7 +61,9 @@ public:
 	s32 destroy();
 
 	s32 do_tick();
+	s32 recv_one_packet(KNetSocket&, s64 now_ms);
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
+	
 
 
 

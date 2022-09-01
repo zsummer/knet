@@ -108,6 +108,16 @@ public:
             destroy();
             return -6;
         }
+
+
+#ifdef WIN32
+        unsigned long val = 1; 
+        ioctlsocket(skt_, FIONBIO, &val);
+#else
+        fcntl((skt_), F_SETFL, fcntl(skt_, F_GETFL) | O_NONBLOCK) == 0;
+#endif // WIN32
+
+
         
         local_.reset_from_socket(skt_);
         state_ = KNTS_BINDED;
@@ -135,12 +145,31 @@ public:
     {
         int addr_len = sizeof(remote.real_addr_.in6);
         int ret = recvfrom(skt_, buf, len, 0, (sockaddr*)&remote.real_addr_.in6, &addr_len);
-        if (ret <= 0)
+        if (ret == 0)
+        {
+            len = 0;
+            return 0;
+        }
+#ifdef WIN32
+        if (ret < 0 && KNetEnv::error_code() == WSAEWOULDBLOCK)
+        {
+            len = 0;
+            return 0;
+        }
+#else
+        if (ret <0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+        {
+            len = 0;
+            return 0;
+        }
+#endif // WIN32
+        if (ret < 0)
         {
             len = 0;
             LogError() << "error:" << KNetEnv::error_code();
             return -1;
         }
+
         len = ret;
         KNetEnv::prof(KNT_STT_SKT_RCV_EVENTS)++;
         KNetEnv::prof(KNT_STT_SKT_RCV_BYTES)+= ret;

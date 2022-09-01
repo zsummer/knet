@@ -33,29 +33,32 @@ KNetController::~KNetController()
 
 }
 
-
-void KNetController::on_readable(KNetSocket& s, s64 now_ms)
+s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 {
-	LogDebug() << s;
 	int len = KNT_UPKT_SIZE;
 	KNetAddress remote;
 	s32 ret = s.recv_pkt(pkg_rcv_, len, remote, now_ms);
 	if (ret != 0)
 	{
-		return ;
+		return -1;
+	}
+	if (len == 0)
+	{
+		return len;
 	}
 
 	if (len < KNetHeader::HDR_SIZE)
 	{
-		return;
+		LogError() << "check hdr error. ";
+		return -2;
 	}
 	KNetHeader hdr;
 	const char* p = pkg_rcv_;
 	p = knet_decode_hdr(p, hdr);
-	if (check_hdr(hdr, p,  len - KNetHeader::HDR_SIZE) != 0)
+	if (check_hdr(hdr, p, len - KNetHeader::HDR_SIZE) != 0)
 	{
 		LogError() << "check hdr error. ";
-		return;
+		return -3;
 	}
 
 	switch (hdr.cmd)
@@ -84,11 +87,20 @@ void KNetController::on_readable(KNetSocket& s, s64 now_ms)
 	default:
 		break;
 	}
+	return len;
+}
 
 
 
-
-	
+void KNetController::on_readable(KNetSocket& s, s64 now_ms)
+{
+	LogDebug() << s;
+	s32 ret = recv_one_packet(s, now_ms);
+	while (ret > 0)
+	{
+		ret = recv_one_packet(s, now_ms);
+	}
+	return;
 }
 
 
@@ -696,6 +708,13 @@ void KNetController::on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32
 		LogError() << "on_psh error";
 		return;
 	}
+
+	if (session->state_ != KNTS_ESTABLISHED)
+	{
+		LogError() << "on_psh state error";
+		return;
+	}
+
 	if (hdr.slot < session->slots_.size())
 	{
 		session->slots_[hdr.slot].remote_ = remote;
