@@ -113,6 +113,14 @@ public:
 #ifdef WIN32
         unsigned long val = 1; 
         ioctlsocket(skt_, FIONBIO, &val);
+
+        BOOL bEnalbeConnRestError = FALSE;
+        DWORD dwBytesReturned = 0;
+
+        u32 SIO_UDP_CONNRESET = IOC_IN | IOC_VENDOR | 12;
+        WSAIoctl(skt_, SIO_UDP_CONNRESET, &bEnalbeConnRestError, sizeof(bEnalbeConnRestError),
+            NULL, 0, &dwBytesReturned, NULL, NULL);
+
 #else
         fcntl((skt_), F_SETFL, fcntl(skt_, F_GETFL) | O_NONBLOCK) == 0;
 #endif // WIN32
