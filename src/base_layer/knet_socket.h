@@ -48,8 +48,6 @@ enum KNTFlag : u16
     KNTF_CLINET =0x2,
 };
 
-class KNetSocket;
-FNLog::LogStream& operator <<(FNLog::LogStream&, const KNetSocket&);
 
 class KNetSocket
 {
@@ -115,6 +113,11 @@ public:
     u32 probe_rcv_cnt_;
     u64 probe_shake_id_;
 };
+
+
+FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s);
+
+
 
 
 

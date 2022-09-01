@@ -106,7 +106,7 @@ private:
 	s32 destroy_session(KNetSession* session);
 
 	KNetSocket* create_stream();
-	void destroy_stream(KNetSocket*);
+	s32 destroy_stream(KNetSocket*);
 
 	s32 check_hdr(KNetHeader& hdr, const char* data, s32 len);
 	s32 make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len);

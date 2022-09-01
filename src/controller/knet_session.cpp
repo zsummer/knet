@@ -40,11 +40,7 @@ KNetSession::~KNetSession()
 
 s32 KNetSession::reset()
 {
-	if (state_ != KNTS_INVALID)
-	{
-		return -1;
-	}
-	state_ = KNTS_INIT;
+	state_ = KNTS_INVALID;
 	flag_ = 0;
 	kcp_ = 0;
 	session_id_ = 0;

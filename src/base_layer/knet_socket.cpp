@@ -197,22 +197,6 @@ s32 KNetSocket::destroy()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s)
 {
     if (s.flag_ & KNTF_SERVER)
@@ -229,4 +213,20 @@ FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s)
     }
     return ls;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

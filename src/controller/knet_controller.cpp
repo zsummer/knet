@@ -185,7 +185,7 @@ s32 KNetController::stop()
 
 	for (auto& s : nss_)
 	{
-		s.destroy();
+		destroy_stream(&s);
 	}
 	nss_.clear();
 	return 0;
@@ -587,7 +587,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 		return;
 	}
 
-	KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS)++;
+
 	KNetSession* session = create_session();
 	session->init(*this);
 	session->state_ = KNTS_ESTABLISHED;
@@ -954,7 +954,7 @@ s32 KNetController::close_session(s32 inst_id)
 		
 		if (s.refs_ == 0)
 		{
-			s.destroy();
+			destroy_stream(&s);
 		}
 		slot.inst_id_ = -1;
 	}
@@ -1004,8 +1004,7 @@ s32 KNetController::remove_session(s32 inst_id)
 			return -3;
 		}
 	}
-	session.destory();
-	return 0;
+	return destroy_session(&session);
 }
 
 
@@ -1042,30 +1041,9 @@ s32 KNetController::destroy_session(KNetSession* session)
 	{
 		return 0;
 	}
-
-	for (auto s: session->slots_)
-	{
-		if (s.inst_id_ < 0 || s.inst_id_ >= (s32)nss_.size())
-		{
-			KNetEnv::error_count()++;
-			continue;
-		}
-		KNetSocket& skt = nss_[s.inst_id_];
-		if (skt.inst_id_ != s.inst_id_)
-		{
-			KNetEnv::error_count()++;
-			continue;
-		}
-		if (skt.refs_ <= 0)
-		{
-			KNetEnv::error_count()++;
-			continue;
-		}
-		skt.refs_--;
-	}
+	
 	KNetEnv::prof(KNT_STT_SES_DESTROY_EVENTS)++;
-	session->state_ = KNTS_LINGER;
-	return 0;
+	return session->destory();
 }
 
 
@@ -1080,7 +1058,7 @@ s32 KNetController::do_tick()
 	{
 		if (s.state_ != KNTS_INVALID && s.refs_ == 0)
 		{
-			s32 ret = s.destroy();
+			s32 ret = destroy_stream(&s);
 			if (ret != 0)
 			{
 				LogError() << "errro";
@@ -1155,15 +1133,14 @@ KNetSocket* KNetController::create_stream()
 }
 
 
-void KNetController::destroy_stream(KNetSocket* s)
+s32 KNetController::destroy_stream(KNetSocket* s)
 {
 	if (s->state_ == KNTS_INVALID)
 	{
-		return;
+		return -1;
 	}
 	KNetEnv::prof(KNT_STT_SKT_FREE_EVENTS)++;
-	s->destroy();
-
+	return s->destroy();
 }
 
 

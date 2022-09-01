@@ -128,6 +128,9 @@ int main()
 	}
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");
+	KNetAssert(KNetEnv::prof(KNT_STT_SKT_ALLOC_EVENTS) == KNetEnv::prof(KNT_STT_SKT_FREE_EVENTS), "");
+	KNetAssert(KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS) == KNetEnv::prof(KNT_STT_SES_DESTROY_EVENTS), "");
+
 	return 0;
 }
 
