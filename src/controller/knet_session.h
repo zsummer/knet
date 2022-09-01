@@ -51,14 +51,18 @@ struct KNetSocketSlot
 
 class KNetController;
 
+
 class KNetSession
 {
 public:
 	KNetSession(s32 inst_id);
 	~KNetSession();
 	s32 reset();
-	s32 init(KNetController& c);
+	s32 init(KNetController& c, u16 flag = KNTF_SERVER);
+	s32 destory();
 	s32 on_tick(s64 now_ms);
+public:
+	bool is_server() {return flag_ & KNTF_SERVER;}
 public:
 	s32 inst_id_;
 	u16 state_;
@@ -76,6 +80,7 @@ public:
 	std::array<KNetSocketSlot, KNT_MAX_SLOTS> slots_;
 };
 
+static const u32 KNT_SESSION_SIZE = sizeof(KNetSession);
 
 
 

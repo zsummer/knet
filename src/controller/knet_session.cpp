@@ -44,7 +44,7 @@ s32 KNetSession::reset()
 	{
 		return -1;
 	}
-	state_ = KNTS_LOCAL_INITED;
+	state_ = KNTS_INIT;
 	flag_ = 0;
 	kcp_ = 0;
 	session_id_ = 0;
@@ -72,12 +72,14 @@ s32 KNetSession::reset()
 #define KCP_FAST_MIN_RTO (50)
 #define KCP_SVR_DEFAULT_RECV_BUFF_SIZE (2048*1024)
 
-s32 KNetSession::init(KNetController& c)
+s32 KNetSession::init(KNetController& c, u16 flag)
 {
 	if (kcp_ != NULL)
 	{
 		return -1;
 	}
+	state_ = KNTS_INIT;
+	flag_ = flag;
 	kcp_ = ikcp_create(0, (void*)&c, inst_id_);
 	ikcp_nodelay(kcp_, 1, 0, 2, 1);
 	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);
@@ -89,6 +91,15 @@ s32 KNetSession::init(KNetController& c)
 	//kcp_->logmask = (IKCP_LOG_OUT_WINS << 1) - 1;
 	return 0;
 }
+
+
+s32 KNetSession::destory()
+{
+	state_ = KNTS_INVALID;
+	return reset();
+}
+
+
 s32 KNetSession::on_tick(s64 now_ms)
 {
 	return 0;

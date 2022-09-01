@@ -116,13 +116,71 @@ void KNetController::on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s3
 
 s32 KNetController::destroy()
 {
-	clean_session();
+	stop();
 
 	return 0;
 }
 
 
-s32 KNetController::start_connect(const KNetConfigs& configs, KNetSession* &session)
+s32 KNetController::start_server(const KNetConfigs& configs)
+{
+	bool has_error = false;
+	for (auto& c : configs)
+	{
+		KNetSocket* ns = create_stream();
+		if (ns == NULL)
+		{
+			KNetEnv::error_count()++;
+			continue;
+		}
+
+		s32 ret = ns->init(c.localhost.c_str(), c.localport, NULL, 0);
+		if (ret != 0)
+		{
+			LogError() << "init " << c.localhost << ":" << c.localport << " has error";
+			has_error = true;
+			KNetEnv::error_count()++;
+			break;
+		}
+
+		LogInfo() << "init " << c.localhost << ":" << c.localport << " success";
+		ns->state_ = KNTS_ESTABLISHED;
+		ns->refs_++;
+		ns->flag_ |= KNTF_SERVER;
+	}
+
+	if (has_error)
+	{
+		destroy();
+		return -1;
+	}
+	return 0;
+}
+
+
+s32 KNetController::stop()
+{
+	for (auto& session : sessions_)
+	{
+		if (session.state_ == KNTS_INVALID)
+		{
+			continue;
+		}
+		close_session(session.inst_id_);
+		remove_session(session.inst_id_);
+	}
+	sessions_.clear();
+
+	for (auto& s : nss_)
+	{
+		s.destroy();
+	}
+	nss_.clear();
+	return 0;
+}
+
+
+s32 KNetController::create_connect(const KNetConfigs& configs, KNetSession* &session)
 {
 	u32 has_error = 0;
 	if (sessions_.full())
@@ -130,17 +188,62 @@ s32 KNetController::start_connect(const KNetConfigs& configs, KNetSession* &sess
 		KNetEnv::error_count()++;
 		return -1;
 	}
-
-
-	for (u32 i = 0; i<configs.size(); i++)
+	
+	if (configs.empty())
 	{
-		auto& c = configs[i];
+		KNetEnv::error_count()++;
+		return -2;
+	}
+
+
+
+	session = create_session();
+	if (session == NULL)
+	{
+		KNetEnv::error_count()++;
+		return -3;
+	}
+
+	s32 ret = session->init(*this, KNTF_CLINET);
+	if (ret != 0)
+	{
+		KNetEnv::error_count()++;
+		remove_connect(session);
+		return -4;
+	}
+
+	session->configs_ = configs;
+	return 0;
+}
+
+
+s32 KNetController::start_connect(KNetSession& session)
+{
+	if (session.state_ != KNTS_INIT)
+	{
+		KNetEnv::error_count()++;
+		return -1;
+	}
+	if (session.configs_.empty())
+	{
+		KNetEnv::error_count()++;
+		return -2;
+	}
+	if (!(session.flag_ & KNTF_CLINET))
+	{
+		KNetEnv::error_count()++;
+		return -3;
+	}
+
+	s32 s_count = 0;
+	for (u32 i = 0; i < session.configs_.size(); i++)
+	{
+		auto& c = session.configs_[i];
 
 		KNetSocket* ns = create_stream();
 		if (ns == NULL)
 		{
 			KNetEnv::error_count()++;
-			has_error++;
 			continue;
 		}
 
@@ -148,47 +251,70 @@ s32 KNetController::start_connect(const KNetConfigs& configs, KNetSession* &sess
 		if (ret != 0)
 		{
 			LogError() << "init " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port << " has error";
-			has_error ++;
 			KNetEnv::error_count()++;
 			continue;
 		}
 
 		LogInfo() << "init " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " success";
+		ns->flag_ = KNTF_CLINET;
 		ns->state_ = KNTS_BINDED;
 		ns->slot_id_ = i;
-		ns->flag_ |= KNTS_CLINET;
-		if (session == NULL)
-		{
-			session = create_session();
-			session->init(*this);
-			session->flag_ = KNTS_CLINET;
-		}
-		ns->client_session_inst_id_ = session->inst_id_;
+		ns->client_session_inst_id_ = session.inst_id_;
+
 		KNetSocketSlot slot;
 		slot.inst_id_ = ns->inst_id_;
 		slot.last_active_ = KNetEnv::now_ms();
 		slot.remote_ = ns->remote_;
-		session->slots_[i] = slot;
-		ns->state_ = KNTS_HANDSHAKE_CH;
+		session.slots_[i] = slot;
 		ns->refs_++;
-
 		ns->reset_probe();
 		ns->probe_seq_id_ = KNetEnv::create_seq_id();
 		ns->state_ = KNTS_HANDSHAKE_PB;
-		send_probe(*ns);
+		ret = send_probe(*ns);
+		if (ret != 0)
+		{
+			LogError() << "send_probe " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port << " has error";
+			KNetEnv::error_count()++;
+			continue;
+		}
+		s_count++;
+	}
 
-	}
-	if (has_error == configs.size())
-	{
-		destroy_session(session);
-		return -1;
-	}
-	return 0;
+	return !s_count;
 }
 
 
 
+s32 KNetController::close_connect(KNetSession* session)
+{
+	if (session == NULL )
+	{
+		KNetEnv::error_count()++;
+		return -1;
+	}
+	if (session->state_ == KNTS_INVALID)
+	{
+		KNetEnv::error_count()++;
+		return -2;
+	}
+	if (session->is_server())
+	{
+		KNetEnv::error_count()++;
+		return -3;
+	}
 
+	return close_session(session->inst_id_);
+}
+
+s32 KNetController::remove_connect(KNetSession* session)
+{
+	if (session == NULL)
+	{
+		KNetEnv::error_count()++;
+		return -1;
+	}
+	return remove_session(session->inst_id_);
+}
 
 
 int KNetController::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id)
@@ -339,7 +465,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 			return;
 		}
 		KNetSession& session = sessions_[s.client_session_inst_id_];
-		if (session.state_ != KNTS_LOCAL_INITED)
+		if (session.state_ != KNTS_INIT)
 		{
 			LogDebug() << "session.state_ aready ch";
 			return;
@@ -451,11 +577,13 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	KNetSession* session = create_session();
 	session->init(*this);
 	session->state_ = KNTS_ESTABLISHED;
-	session->flag_ = KNTS_SERVER;
+	session->flag_ = KNTF_SERVER;
 	session->shake_id_ = ch.shake_id;
 	session->session_id_ = ch.shake_id;
+
 	session->slots_[hdr.slot].inst_id_ = s.inst_id_;
 	session->slots_[hdr.slot].remote_ = remote;
+	s.refs_++;
 
 	handshakes_s_[ch.shake_id] = session;
 	establisheds_s_[session->session_id_] = session;
@@ -582,6 +710,16 @@ void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s3
 	LogDebug() << "session on psh";
 }
 
+s32 KNetController::send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote)
+{
+	KNetHeader hdr;
+	set_snd_data_offset(snd_data());
+	make_hdr(hdr, session_id, 0, 0, 0, KNETCMD_RST, 0);
+	write_hdr(hdr);
+	s32 send_cnt = 0;
+	send_packet(s, snd_head(), snd_len(), remote, KNetEnv::now_ms());
+	return 0;
+}
 
 s32 KNetController::send_rst(KNetSession& s)
 {
@@ -604,6 +742,12 @@ s32 KNetController::send_rst(KNetSession& s)
 
 void KNetController::on_rst(KNetSocket& s, KNetHeader& hdr, KNetAddress& remote, s64 now_ms)
 {
+	if (s.state_ == KNTS_RST)
+	{
+		LogDebug() << s << " arealdy in fin";
+		return;
+	}
+
 	KNetSession* session = NULL;
 	if (s.is_server())
 	{
@@ -614,6 +758,7 @@ void KNetController::on_rst(KNetSocket& s, KNetHeader& hdr, KNetAddress& remote,
 		}
 		else
 		{
+			//don't process
 			return;
 		}
 	}
@@ -621,7 +766,7 @@ void KNetController::on_rst(KNetSocket& s, KNetHeader& hdr, KNetAddress& remote,
 	{
 		if (s.client_session_inst_id_ < 0 || s.client_session_inst_id_ >(s32)sessions_.size())
 		{
-			LogError() << "on_psh error";
+			LogError() << "on_rst error";
 			return;
 		}
 		session = &sessions_[s.client_session_inst_id_];
@@ -640,7 +785,12 @@ void KNetController::on_rst(KNetSession& s, KNetHeader& hdr, KNetAddress& remote
 	{
 		return;
 	}
-	remove_session(s.inst_id_);
+	close_session(s.inst_id_);
+	//to do callback   
+	if (s.is_server())
+	{
+		remove_session(s.inst_id_);
+	}
 	return ;
 }
 
@@ -706,24 +856,6 @@ s32 KNetController::make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 ve
 
 
 
-s32 KNetController::clean_session()
-{
-	for (auto& session : sessions_)
-	{
-		remove_session(session.inst_id_);
-	}
-	sessions_.clear();
-
-	for (auto& s : nss_)
-	{
-		s.destroy();
-	}
-	nss_.clear();
-	return 0;
-}
-
-
-
 
 s32 KNetController::remove_session_with_rst(s32 inst_id)
 {
@@ -737,25 +869,36 @@ s32 KNetController::remove_session_with_rst(s32 inst_id)
 	{
 		return -2;
 	}
-	send_rst(session);
+	close_session(inst_id);
 	remove_session(inst_id);
 	return 0;
 }
 
-s32 KNetController::remove_session(s32 inst_id)
+s32 KNetController::close_session(s32 inst_id)
 {
 	if (inst_id < 0 || inst_id >= (s32)sessions_.size())
 	{
+		KNetEnv::error_count()++;
 		return -1;
 	}
-	
+
 	KNetSession& session = sessions_[inst_id];
 	if (session.state_ == KNTS_INVALID)
 	{
+		KNetEnv::error_count()++;
 		return -2;
 	}
 
-	for (auto& slot: session.slots_)
+	if (session.state_ == KNTS_ESTABLISHED)
+	{
+		s32 ret = send_rst(session);
+		if (ret != 0)
+		{
+			KNetEnv::error_count()++;
+		}
+	}
+
+	for (auto& slot : session.slots_)
 	{
 		if (slot.inst_id_ == -1)
 		{
@@ -764,32 +907,79 @@ s32 KNetController::remove_session(s32 inst_id)
 		if (slot.inst_id_ >= (s32)nss_.size())
 		{
 			LogError() << "error";
+			KNetEnv::error_count()++;
 			continue;
 		}
 		KNetSocket& s = nss_[slot.inst_id_];
 		if (s.refs_ <= 0)
 		{
 			LogError() << "error";
+			KNetEnv::error_count()++;
 			continue;
 		}
+
+		if (s.flag_ != session.flag_)
+		{
+			LogError() << "error";
+			KNetEnv::error_count()++;
+		}
+
 		s.refs_--;
 		s.client_session_inst_id_ = -1;
-		slot.inst_id_ = -1;
+		
 		if (s.refs_ == 0)
 		{
 			s.destroy();
 		}
+		slot.inst_id_ = -1;
 	}
-	session.state_ = KNTS_LINGER;
-	if (session.flag_ & KNTS_CLINET)
+	if (session.state_ == KNTS_ESTABLISHED)
 	{
-
+		session.state_ = KNTS_RST;
 	}
-	else if (session.flag_ & KNTS_SERVER)
+	else
+	{
+		session.state_ = KNTS_LINGER;
+	}
+
+	if (session.flag_ & KNTF_SERVER)
 	{
 		handshakes_s_.erase(session.shake_id_);
 		establisheds_s_.erase(session.session_id_);
 	}
+	return 0;
+}
+
+//todo  remove session after close session
+//todo remove listen socket(server)
+
+//proc rst state & session state
+
+s32 KNetController::remove_session(s32 inst_id)
+{
+	if (inst_id < 0 || inst_id >= (s32)sessions_.size())
+	{
+		KNetEnv::error_count()++;
+		return -1;
+	}
+
+	KNetSession& session = sessions_[inst_id];
+
+	if (session.state_ != KNTS_RST && session.state_ != KNTS_LINGER)
+	{
+		KNetEnv::error_count()++;
+		return -2;
+	}
+
+	for (auto& slot: session.slots_)
+	{
+		if (slot.inst_id_ != -1)
+		{
+			KNetEnv::error_count()++;
+			return -3;
+		}
+	}
+	session.destory();
 	return 0;
 }
 
@@ -853,40 +1043,6 @@ s32 KNetController::destroy_session(KNetSession* session)
 	return 0;
 }
 
-s32 KNetController::start_server(const KNetConfigs& configs)
-{
-	bool has_error = false;
-	for (auto& c : configs)
-	{
-		KNetSocket* ns = create_stream();
-		if (ns == NULL)
-		{
-			KNetEnv::error_count()++;
-			continue;
-		}
-
-		s32 ret = ns->init(c.localhost.c_str(), c.localport, NULL, 0);
-		if (ret != 0)
-		{
-			LogError() << "init " << c.localhost << ":" << c.localport << " has error";
-			has_error = true;
-			KNetEnv::error_count()++;
-			break;
-		}
-
-		LogInfo() << "init " << c.localhost << ":" << c.localport << " success";
-		ns->state_ = KNTS_ESTABLISHED;
-		ns->refs_++;
-		ns->flag_ |= KNTS_SERVER;
-	}
-
-	if (has_error)
-	{
-		destroy();
-		return -1;
-	}
-	return 0;
-}
 
 
 

@@ -27,24 +27,25 @@
 #include "knet_env.h"
 
 
-enum KNTS_STATE: u16
+enum KNTState: u16
 {
     KNTS_INVALID = 0,
-    KNTS_LOCAL_INITED,
+    KNTS_INIT,
     KNTS_BINDED,
     KNTS_CONNECTED,
     KNTS_HANDSHAKE_PB,
     KNTS_HANDSHAKE_CH,
     KNTS_HANDSHAKE_SH,
     KNTS_ESTABLISHED,
+    KNTS_RST,
     KNTS_LINGER,
 };
 
-enum KNTS_FLAGS : u16
+enum KNTFlag : u16
 {
-    KNTS_NONE = 0,
-    KNTS_SERVER = 0x1,
-    KNTS_CLINET =0x2,
+    KNTF_NONE = 0,
+    KNTF_SERVER = 0x1,
+    KNTF_CLINET =0x2,
 };
 
 class KNetSocket;
@@ -100,7 +101,7 @@ public:
             return -5;
         }
         KNetEnv::prof(KNT_STT_SKT_INIT_EVENTS)++;
-        state_ = KNTS_LOCAL_INITED;
+        state_ = KNTS_INIT;
         ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());
         if (ret != 0)
         {
@@ -155,13 +156,13 @@ public:
             return 0;
         }
 
-        if (refs_ > 0 && !(flag_ & KNTS_SERVER))
+        if (refs_ > 0 && !(flag_ & KNTF_SERVER))
         {
             KNetEnv::error_count()++;
             return -2;
         }
 
-        if (refs_ > 1 && (flag_ & KNTS_SERVER))
+        if (refs_ > 1 && (flag_ & KNTF_SERVER))
         {
             KNetEnv::error_count()++;
             return -3;
@@ -186,7 +187,7 @@ public:
         }
 
         state_ = KNTS_INVALID;
-        flag_ = KNTS_NONE;
+        flag_ = KNTF_NONE;
         refs_ = 0;
         last_active_ = KNetEnv::now_ms();
         return 0;
@@ -201,13 +202,13 @@ public:
         skt_ = INVALID_SOCKET;
         slot_id_ = 0;
         state_ = KNTS_INVALID;
-        flag_ = KNTS_NONE;
+        flag_ = KNTF_NONE;
         refs_ = 0;
         client_session_inst_id_ = -1;
         last_active_ = KNetEnv::now_ms(); 
         reset_probe();
     }
-    bool is_server() const { return flag_ & KNTS_SERVER; }
+    bool is_server() const { return flag_ & KNTF_SERVER; }
 
     s32 inst_id_;
     u8  slot_id_;
@@ -244,11 +245,11 @@ public:
 
 inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s)
 {
-    if (s.flag_ & KNTS_SERVER)
+    if (s.flag_ & KNTF_SERVER)
     {
         ls << "server: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ <<", refs:" << s.refs_ << ", local:" << s.local_.debug_string() ;
     }
-    else if (s.flag_ & KNTS_CLINET)
+    else if (s.flag_ & KNTF_CLINET)
     {
         ls << "client: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
     }
