@@ -62,7 +62,7 @@ int main()
 	KNetAssert(test_socket_bind() == 0, "");
 	//KNetAssert(test_socket_bind2() == 0, "");
 
-	KNetEnv::clean_prof();
+	KNetEnv::clean_count();
 	KNetEnv::error_count() = 0;
 
 
@@ -128,8 +128,8 @@ int main()
 	}
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");
-	KNetAssert(KNetEnv::prof(KNT_STT_SKT_ALLOC_EVENTS) == KNetEnv::prof(KNT_STT_SKT_FREE_EVENTS), "");
-	KNetAssert(KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS) == KNetEnv::prof(KNT_STT_SES_DESTROY_EVENTS), "");
+	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
+	KNetAssert(KNetEnv::count(KNT_STT_SES_CREATE_COUNT) == KNetEnv::count(KNT_STT_SES_DESTROY_COUNT), "");
 
 	return 0;
 }

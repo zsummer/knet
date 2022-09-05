@@ -60,9 +60,9 @@ public:
     
     s32 init(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port);
 
-    s32 send_pkt(const char* pkg_data, s32 len, KNetAddress& remote);
+    s32 send_packet(const char* pkg_data, s32 len, KNetAddress& remote);
 
-    s32 recv_pkt(char* buf, s32& len, KNetAddress& remote, s64 now_ms);
+    s32 recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms);
 
 
     s32 destroy();

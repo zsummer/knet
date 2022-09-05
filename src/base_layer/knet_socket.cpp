@@ -21,14 +21,14 @@
 
 KNetSocket::KNetSocket(s32 inst_id)
 {
-    KNetEnv::prof(KNT_STT_SKT_INSTRUCT_EVENTS)++;
+    KNetEnv::count(KNT_STT_SKT_INSTRUCT_COUNT)++;
     inst_id_ = inst_id;
     reset();
     //LogDebug() << *this;
 }
 KNetSocket::~KNetSocket()
 {
-    KNetEnv::prof(KNT_STT_SKT_DESTRUCT_EVENTS)++;
+    KNetEnv::count(KNT_STT_SKT_DESTRUCT_COUNT)++;
     if (state_ != KNTS_INVALID || skt_ != INVALID_SOCKET)
     {
         KNetEnv::error_count()++;
@@ -66,7 +66,7 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
     {
         return -5;
     }
-    KNetEnv::prof(KNT_STT_SKT_INIT_EVENTS)++;
+    
     state_ = KNTS_INIT;
     ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());
     if (ret != 0)
@@ -92,10 +92,9 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 #endif // WIN32
 
 
-
+    KNetEnv::count(KNT_STT_SKT_INIT_COUNT)++;
     local_.reset_from_socket(skt_);
     state_ = KNTS_BINDED;
-    KNetEnv::prof(KNT_STT_SKT_BIND_EVENTS)++;
     LogInfo() << "bind local:" << local_.debug_string();
     //LogInfo() << *this;
     return 0;
@@ -103,10 +102,10 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 
 
 
-s32 KNetSocket::send_pkt(const char* pkg_data, s32 len, KNetAddress& remote)
+s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
 {
-    KNetEnv::prof(KNT_STT_SKT_SND_EVENTS)++;
-    KNetEnv::prof(KNT_STT_SKT_SND_BYTES) += len;
+    KNetEnv::count(KNT_STT_SKT_SND_COUNT)++;
+    KNetEnv::count(KNT_STT_SKT_SND_BYTES) += len;
     s32 ret = sendto(skt_, pkg_data, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
     if (ret == SOCKET_ERROR)
     {
@@ -115,7 +114,7 @@ s32 KNetSocket::send_pkt(const char* pkg_data, s32 len, KNetAddress& remote)
     return 0;
 }
 
-s32 KNetSocket::recv_pkt(char* buf, s32& len, KNetAddress& remote, s64 now_ms)
+s32 KNetSocket::recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms)
 {
     socklen_t addr_len = sizeof(remote.real_addr_.in6);
     int ret = recvfrom(skt_, buf, len, 0, (sockaddr*)&remote.real_addr_.in6, &addr_len);
@@ -145,8 +144,8 @@ s32 KNetSocket::recv_pkt(char* buf, s32& len, KNetAddress& remote, s64 now_ms)
     }
 
     len = ret;
-    KNetEnv::prof(KNT_STT_SKT_RCV_EVENTS)++;
-    KNetEnv::prof(KNT_STT_SKT_RCV_BYTES) += ret;
+    KNetEnv::count(KNT_STT_SKT_RCV_COUNT)++;
+    KNetEnv::count(KNT_STT_SKT_RCV_BYTES) += ret;
     last_active_ = now_ms;
     return 0;
 }
@@ -176,9 +175,8 @@ s32 KNetSocket::destroy()
         KNetEnv::error_count()++;
         return -4;
     }
-    KNetEnv::prof(KNT_STT_SKT_DESTROY_EVENTS)++;
+   
     //LogInfo() << *this;
-
     if (skt_ != INVALID_SOCKET)
     {
 #ifdef _WIN32
@@ -189,6 +187,7 @@ s32 KNetSocket::destroy()
         skt_ = INVALID_SOCKET;
     }
 
+    KNetEnv::count(KNT_STT_SKT_DESTROY_COUNT)++;
     state_ = KNTS_INVALID;
     flag_ = KNTF_NONE;
     refs_ = 0;

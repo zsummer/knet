@@ -28,12 +28,12 @@ s32& KNetEnv::error_count()
 
 s64 g_knet_status[KNT_STT_MAX] = { 0 };
 
-s64& KNetEnv::prof(KNET_STATUS id)
+s64& KNetEnv::count(KNET_STATUS id)
 {
     return g_knet_status[id];
 }
 
-void KNetEnv::clean_prof()
+void KNetEnv::clean_count()
 {
     memset(g_knet_status, 0, sizeof(g_knet_status));
 }

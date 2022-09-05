@@ -37,7 +37,7 @@ s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 {
 	int len = KNT_UPKT_SIZE;
 	KNetAddress remote;
-	s32 ret = s.recv_pkt(pkg_rcv_, len, remote, now_ms);
+	s32 ret = s.recv_packet(pkg_rcv_, len, remote, now_ms);
 	if (ret != 0)
 	{
 		return -1;
@@ -361,7 +361,7 @@ s32 KNetController::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& 
 {
 	static const s32 offset = offsetof(KNetHeader, slot);
 	*(pkg + offset) = s.slot_id_;
-	return s.send_pkt(pkg, len, remote);
+	return s.send_packet(pkg, len, remote);
 }
 
 
@@ -1016,7 +1016,7 @@ KNetSession* KNetController::create_session()
 		KNetSession& s = sessions_[i];
 		if (s.state_ == KNTS_INVALID)
 		{
-			KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS)++;
+			KNetEnv::count(KNT_STT_SES_CREATE_COUNT)++;
 			return &s;
 		}
 	}
@@ -1026,8 +1026,8 @@ KNetSession* KNetController::create_session()
 		return NULL;
 	}
 	sessions_.emplace_back(sessions_.size());
-	KNetEnv::prof(KNT_STT_SES_ALLOC_EVENTS)++;
-	KNetEnv::prof(KNT_STT_SES_CREATE_EVENTS)++;
+	KNetEnv::count(KNT_STT_SES_ALLOC_COUNT)++;
+	KNetEnv::count(KNT_STT_SES_CREATE_COUNT)++;
 	return &sessions_.back();
 }
 
@@ -1042,7 +1042,7 @@ s32 KNetController::destroy_session(KNetSession* session)
 		return 0;
 	}
 	
-	KNetEnv::prof(KNT_STT_SES_DESTROY_EVENTS)++;
+	KNetEnv::count(KNT_STT_SES_DESTROY_COUNT)++;
 	return session->destory();
 }
 
@@ -1118,7 +1118,7 @@ KNetSocket* KNetController::create_stream()
 		KNetSocket& s = nss_[i];
 		if (s.state_ == KNTS_INVALID)
 		{
-			KNetEnv::prof(KNT_STT_SKT_ALLOC_EVENTS)++;
+			KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT)++;
 			return &s;
 		}
 	}
@@ -1128,7 +1128,7 @@ KNetSocket* KNetController::create_stream()
 		return NULL;
 	}
 	nss_.emplace_back(nss_.size());
-	KNetEnv::prof(KNT_STT_SKT_ALLOC_EVENTS)++;
+	KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT)++;
 	return &nss_.back();
 }
 
@@ -1139,7 +1139,7 @@ s32 KNetController::destroy_stream(KNetSocket* s)
 	{
 		return -1;
 	}
-	KNetEnv::prof(KNT_STT_SKT_FREE_EVENTS)++;
+	KNetEnv::count(KNT_STT_SKT_FREE_COUNT)++;
 	return s->destroy();
 }
 
