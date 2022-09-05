@@ -23,7 +23,7 @@
 #include "knet_env.h"
 #include "ikcp.h"
 #include <chrono>
-
+#include <functional>
 
 
 static inline char* ikcp_encode64u(char* p, IUINT64 l)
@@ -373,7 +373,7 @@ static inline const char* knet_decode_packet(const char* p, KNetSH& pkt)
 
 
 
-
+class KNetSession;
 using KNetOnConnect = std::function<void(KNetSession& session, bool connected, s32 error_code)>;
 
 
