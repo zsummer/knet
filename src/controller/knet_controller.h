@@ -52,17 +52,15 @@ public:
 	s32 restart_connect(KNetSession*& session);
 	s32 close_connect(KNetSession* session);
 	s32 remove_connect(KNetSession* session);
+	s32 do_tick();
+	s32 stop();
 private:
-	
-public:
 	s32 close_session(s32 inst_id);
 	s32 remove_session(s32 inst_id);
 	s32 remove_session_with_rst(s32 inst_id);
-
-	s32 stop();
 	s32 destroy();
 
-	s32 do_tick();
+	
 	s32 recv_one_packet(KNetSocket&, s64 now_ms);
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
 	

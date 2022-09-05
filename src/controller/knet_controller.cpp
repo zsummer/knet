@@ -128,8 +128,22 @@ void KNetController::on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s3
 
 s32 KNetController::destroy()
 {
-	stop();
+	for (auto& session : sessions_)
+	{
+		if (session.state_ == KNTS_INVALID)
+		{
+			continue;
+		}
+		close_session(session.inst_id_);
+		remove_session(session.inst_id_);
+	}
+	sessions_.clear();
 
+	for (auto& s : nss_)
+	{
+		skt_destroy(s);
+	}
+	nss_.clear();
 	return 0;
 }
 
@@ -172,23 +186,7 @@ s32 KNetController::start_server(const KNetConfigs& configs)
 
 s32 KNetController::stop()
 {
-	for (auto& session : sessions_)
-	{
-		if (session.state_ == KNTS_INVALID)
-		{
-			continue;
-		}
-		close_session(session.inst_id_);
-		remove_session(session.inst_id_);
-	}
-	sessions_.clear();
-
-	for (auto& s : nss_)
-	{
-		skt_destroy(s);
-	}
-	nss_.clear();
-	return 0;
+	return destroy();
 }
 
 

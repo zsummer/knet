@@ -63,7 +63,7 @@ s32 test_session_connect_mix()
 
 
 
-	controller.remove_session_with_rst(session->inst_id_);
+	controller.close_connect(session);
 	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller.do_tick();
@@ -87,7 +87,7 @@ s32 test_session_connect_mix()
 	}
 
 	LogInfo() << "rst test finish.";
-	ret = controller.destroy();
+	ret = controller.stop();
 	KNetAssert(ret == 0, "rst skt ");
 
 	if (true)
@@ -169,7 +169,7 @@ s32 test_session_connect()
 
 
 
-	controller2.remove_session_with_rst(session->inst_id_);
+	controller2.close_connect(session);
 	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller1.do_tick();
@@ -210,9 +210,9 @@ s32 test_session_connect()
 
 
 	LogInfo() << "rst test finish.";
-	ret = controller1.destroy();
+	ret = controller1.stop();
 	KNetAssert(ret == 0, "rst skt ");
-	ret = controller2.destroy();
+	ret = controller2.stop();
 	KNetAssert(ret == 0, "rst skt ");
 	if (true)
 	{

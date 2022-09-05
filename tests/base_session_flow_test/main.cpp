@@ -76,7 +76,7 @@ s32 test_session_connect_mix()
 	}
 
 
-	controller.remove_session_with_rst(session->inst_id_);
+	controller.close_connect(session);
 	for (size_t i = 0; i < 1; i++)
 	{
 		ret = controller.do_tick();
@@ -85,7 +85,7 @@ s32 test_session_connect_mix()
 	}
 
 
-	controller.destroy();
+	controller.stop();
 	for (size_t i = 0; i < 1; i++)
 	{
 		ret = controller.do_tick();
