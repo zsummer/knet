@@ -397,6 +397,11 @@ static inline const char* knet_decode_packet(const char* p, KNetSH& pkt)
 class KNetSession;
 using KNetOnConnect = std::function<void(KNetSession& session, bool connected, u16 state, s64 time_out)>;
 
+using KNetOnAccept = std::function<void(KNetSession& session, s32 code)>;
+using KNetOnDisconnect = std::function<void(KNetSession& session, s32 code)>;
+
+using KNetOnKcpData = std::function<void(KNetSession& s, const char* data, s32 len, s64 now_ms)>;
+
 
 
 

@@ -46,7 +46,7 @@ s32 test_session_connect_mix()
 		}
 	};
 
-	ret = controller.start_connect(*session, on_connect, 50000);
+	ret = controller.start_connect(*session, on_connect, 5000);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 10; i++)
@@ -57,14 +57,11 @@ s32 test_session_connect_mix()
 		{
 			LogInfo() << "first connected  select :" << i << " c";
 		}
-		bool all_socket_connect = 0;
-		if (true)
-		{
-
-		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	KNetAssert(connect_tested == 0, "");
+
+
 
 
 	controller.send_kcp_data(*session, "12345", 6, KNetEnv::now_ms());
@@ -77,24 +74,45 @@ s32 test_session_connect_mix()
 
 
 	controller.close_connect(session);
-	for (size_t i = 0; i < 1; i++)
+	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller.do_tick();
 		KNetAssert(ret == 0, "");
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
-
-	controller.stop();
-	for (size_t i = 0; i < 1; i++)
+	if (true)
 	{
-		ret = controller.do_tick();
-		if (ret != 0)
+		for (auto& s : controller.sessions())
 		{
-			LogError() << "select error";
+			KNetAssert(s.state_ != KNTS_ESTABLISHED, "rst session ");
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		for (auto& s : controller.nss())
+		{
+			if (s.state_ == KNTS_ESTABLISHED)
+			{
+				KNetAssert(controller.skt_is_server(s), "rst skt ");
+			}
+		}
 	}
+
+	LogInfo() << "rst test finish.";
+	ret = controller.stop();
+	KNetAssert(ret == 0, "rst skt ");
+
+	if (true)
+	{
+		for (auto& s : controller.sessions())
+		{
+			KNetAssert(s.state_ == KNTS_INVALID, "rst session ");
+		}
+		for (auto& s : controller.nss())
+		{
+			KNetAssert(s.state_ == KNTS_INVALID, "rst socket ");
+		}
+	}
+
+
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");
 	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
@@ -106,7 +124,146 @@ s32 test_session_connect_mix()
 s32 test_session_connect()
 {
 
+	KNetEnv::clean_count();
+	KNetEnv::error_count() = 0;
+
+
+	KNetConfigs mc;
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
+
+	std::shared_ptr< KNetController> sp_ctl1 = std::make_shared<KNetController>();
+	KNetController& controller1 = *sp_ctl1;
+
+	std::shared_ptr< KNetController> sp_ctl2 = std::make_shared<KNetController>();
+	KNetController& controller2 = *sp_ctl2;
+
+
+	s32 ret = controller1.start_server(mc);
+	KNetAssert(ret == 0, "");
+
+	mc.clear();
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
+	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
+	KNetSession* session = NULL;
+	ret = controller2.create_connect(mc, session);
+	KNetAssert(ret == 0, "");
+	KNetAssert(session != NULL, "");
+	s32 connect_tested = 1;
+	KNetOnConnect on_connect = [&](KNetSession& session, bool connected, u16 state, s64 time_out)
+	{
+		connect_tested = 0;
+		if (!connected)
+		{
+			connect_tested = -1;
+		}
+	};
+
+	ret = controller2.start_connect(*session, on_connect, 50000);
+	KNetAssert(ret == 0, "");
+
+	for (size_t i = 0; i < 10; i++)
+	{
+		ret = controller1.do_tick();
+		KNetAssert(ret == 0, "");
+		ret = controller2.do_tick();
+		KNetAssert(ret == 0, "");
+
+		if (connect_tested == 0)
+		{
+			LogInfo() << "first connected  select :" << i << " c";
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+	KNetAssert(connect_tested == 0, "");
+
+
+	controller2.send_kcp_data(*session, "12345", 6, KNetEnv::now_ms());
+	for (size_t i = 0; i < 1; i++)
+	{
+		ret = controller1.do_tick();
+		KNetAssert(ret == 0, "");
+		ret = controller2.do_tick();
+		KNetAssert(ret == 0, "");
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+
+
+
+	controller2.close_connect(session);
+	for (size_t i = 0; i < 10; i++)
+	{
+		ret = controller1.do_tick();
+		KNetAssert(ret == 0, "");
+		ret = controller2.do_tick();
+		KNetAssert(ret == 0, "");
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+
+	if (true)
+	{
+		for (auto& s : controller1.sessions())
+		{
+			KNetAssert(s.state_ != KNTS_ESTABLISHED, "rst session ");
+		}
+		for (auto& s : controller1.nss())
+		{
+			if (s.state_ == KNTS_ESTABLISHED)
+			{
+				KNetAssert(controller1.skt_is_server(s), "rst skt ");
+			}
+		}
+	}
+	if (true)
+	{
+		for (auto& s : controller2.sessions())
+		{
+			KNetAssert(s.state_ != KNTS_ESTABLISHED, "rst session ");
+		}
+		for (auto& s : controller2.nss())
+		{
+			if (s.state_ == KNTS_ESTABLISHED)
+			{
+				KNetAssert(controller2.skt_is_server(s), "rst skt ");
+			}
+		}
+	}
+
+
+	LogInfo() << "rst test finish.";
+	ret = controller1.stop();
+	KNetAssert(ret == 0, "rst skt ");
+	ret = controller2.stop();
+	KNetAssert(ret == 0, "rst skt ");
+	if (true)
+	{
+		for (auto& s : controller1.sessions())
+		{
+			KNetAssert(s.state_ == KNTS_INVALID, "rst session ");
+		}
+		for (auto& s : controller1.nss())
+		{
+			KNetAssert(s.state_ == KNTS_INVALID, "rst socket ");
+		}
+	}
+	if (true)
+	{
+		for (auto& s : controller2.sessions())
+		{
+			KNetAssert(s.state_ == KNTS_INVALID, "rst session ");
+		}
+		for (auto& s : controller2.nss())
+		{
+			KNetAssert(s.state_ == KNTS_INVALID, "rst socket ");
+		}
+	}
+
+	LogInfo() << "finish.";
+	KNetAssert(KNetEnv::error_count() == 0, "");
+	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
+	KNetAssert(KNetEnv::count(KNT_STT_SES_CREATE_COUNT) == KNetEnv::count(KNT_STT_SES_DESTROY_COUNT), "");
 	return 0;
+
 }
 
 

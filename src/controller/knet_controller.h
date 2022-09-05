@@ -42,8 +42,12 @@ using KNetSessions = zarray<KNetSession, KNET_MAX_SESSIONS>;
 class KNetController: public KNetSelect
 {
 public:
+	friend class KNetSession;
 	KNetController();
 	~KNetController();
+
+
+
 	s32 start_server(const KNetConfigs& configs);
 
 public:
@@ -52,6 +56,8 @@ public:
 	s32 restart_connect(KNetSession*& session);
 	s32 close_connect(KNetSession* session);
 	s32 remove_connect(KNetSession* session);
+
+public:
 	s32 do_tick();
 	s32 stop();
 private:
@@ -59,8 +65,6 @@ private:
 	s32 remove_session(s32 inst_id);
 	s32 remove_session_with_rst(s32 inst_id);
 	s32 destroy();
-
-	
 	s32 recv_one_packet(KNetSocket&, s64 now_ms);
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
 	
@@ -71,12 +75,15 @@ private:
 
 public:
 	void send_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
+
+
 	void on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
 
+private:
 	static int kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id);
 	static void kcp_writelog(const char* log, struct IKCPCB* kcp, void* user, int user_id);
 
-public:
+
 	s32 send_probe(KNetSocket& s);
 	void on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
@@ -100,7 +107,6 @@ public:
 
 	void on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
-private:
 
 	s32 send_packet(KNetSocket&, char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 

@@ -29,7 +29,7 @@ s32 test_session_bind()
 	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
 
-	controller.destroy();
+	controller.stop();
 	ret = s1.init("127.0.0.1", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
 	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);
