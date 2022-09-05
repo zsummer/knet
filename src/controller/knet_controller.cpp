@@ -296,7 +296,7 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 		session.active_time_ = KNetEnv::now_ms();
 		return 0;
 	}
-	return !s_count;
+	return  -10;
 }
 
 
