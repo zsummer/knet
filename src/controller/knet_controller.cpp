@@ -228,7 +228,7 @@ s32 KNetController::create_connect(const KNetConfigs& configs, KNetSession* &ses
 }
 
 
-s32 KNetController::start_connect(KNetSession& session)
+s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connected)
 {
 	if (session.state_ != KNTS_INIT)
 	{
@@ -290,7 +290,12 @@ s32 KNetController::start_connect(KNetSession& session)
 		}
 		s_count++;
 	}
-
+	if (s_count > 0)
+	{
+		session.on_connected_ = on_connected;
+		session.active_time_ = KNetEnv::now_ms();
+		return 0;
+	}
 	return !s_count;
 }
 
@@ -313,7 +318,7 @@ s32 KNetController::close_connect(KNetSession* session)
 		KNetEnv::error_count()++;
 		return -3;
 	}
-
+	session->on_connected_ = nullptr;
 	return close_session(session->inst_id_);
 }
 
@@ -395,6 +400,11 @@ void KNetController::on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s
 		LogError() << "ch error";
 		return;
 	}
+	if (!s.is_server())
+	{
+		LogError() << "ch error";
+		return;
+	}
 	KNetProbe packet;
 	knet_decode_packet(pkg, packet);
 	if (!packet.dvi.is_valid())
@@ -440,7 +450,12 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 {
 	if (len < KNetProbeAck::PKT_SIZE)
 	{
-		LogError() << "ch error";
+		LogError() << "on_probe_ack error";
+		return;
+	}
+	if (s.is_server())
+	{
+		LogError() << "on_probe_ack error";
 		return;
 	}
 	KNetProbeAck packet;
@@ -537,7 +552,12 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 {
 	if (len < KNetCH::PKT_SIZE)
 	{
-		LogError() << "ch error";
+		LogError() << "on_ch error";
+		return;
+	}
+	if (!s.is_server())
+	{
+		LogError() << "on_ch error";
 		return;
 	}
 
@@ -632,9 +652,15 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	LogDebug() << "recv sh";
 	if (len < KNetSH::PKT_SIZE)
 	{
-		LogError() << "sh error";
+		LogError() << "on_sh error";
 		return;
 	}
+	if (s.is_server())
+	{
+		LogError() << "on_sh error";
+		return;
+	}
+
 	KNetSH sh;
 	knet_decode_packet(pkg, sh);
 	if (s.client_session_inst_id_ < 0 || s.client_session_inst_id_ >= (s32)sessions_.size())
@@ -659,6 +685,13 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	}
 
 	LogInfo() << "client established sucess";
+
+	if (session.on_connected_)
+	{
+		auto on = session.on_connected_;
+		session.on_connected_ = nullptr;
+		on(session, true, 0);
+	}
 	//send_psh(session, "123", 4);
 }
 

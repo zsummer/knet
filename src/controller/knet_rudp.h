@@ -374,7 +374,7 @@ static inline const char* knet_decode_packet(const char* p, KNetSH& pkt)
 
 
 
-
+using KNetOnConnect = std::function<void(KNetSession& session, bool connected, s32 error_code)>;
 
 
 

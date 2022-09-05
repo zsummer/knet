@@ -67,17 +67,21 @@ public:
 	s32 inst_id_;
 	u16 state_;
 	u16 flag_;
+	s64 active_time_;
 	u64 session_id_;
 	u64 shake_id_;
 	u64 snd_pkt_id_;
-	ikcpcb* kcp_;
 
+
+	ikcpcb* kcp_;
 	std::string encrypt_key;
 	KNetConfigs configs_;
 	char sg_[16];
 	char sp_[16];
 	char box_[16];
 	std::array<KNetSocketSlot, KNT_MAX_SLOTS> slots_;
+
+	KNetOnConnect on_connected_;
 };
 
 static const s32 KNT_SESSION_SIZE = sizeof(KNetSession);

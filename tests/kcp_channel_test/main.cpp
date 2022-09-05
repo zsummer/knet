@@ -79,7 +79,7 @@ int main()
 	KNetSession* session = NULL;
 	ret = controller.create_connect(mc, session);
 	KNetAssert(ret == 0, "");
-	ret = controller.start_connect(*session);
+	ret = controller.start_connect(*session, NULL);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 10; i++)

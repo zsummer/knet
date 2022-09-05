@@ -46,12 +46,15 @@ public:
 	~KNetController();
 	s32 start_server(const KNetConfigs& configs);
 
+public:
 	s32 create_connect(const KNetConfigs& configs, KNetSession*& session);
-	s32 start_connect(KNetSession& session);
+	s32 start_connect(KNetSession& session, KNetOnConnect on_connected);
 	s32 restart_connect(KNetSession*& session);
 	s32 close_connect(KNetSession* session);
 	s32 remove_connect(KNetSession* session);
-
+private:
+	
+public:
 	s32 close_session(s32 inst_id);
 	s32 remove_session(s32 inst_id);
 	s32 remove_session_with_rst(s32 inst_id);
@@ -131,6 +134,8 @@ private:
 	//KNetSessions sessions_;
 	std::unordered_map<u64, KNetSession*> handshakes_s_;
 	std::unordered_map<u64, KNetSession*> establisheds_s_;
+
+
 };
 
 
