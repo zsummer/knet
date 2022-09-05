@@ -78,6 +78,7 @@ public:
         refs_ = 0;
         client_session_inst_id_ = -1;
         last_active_ = KNetEnv::now_ms(); 
+        user_data_ = 0;
         reset_probe();
     }
     bool is_server() const { return flag_ & KNTF_SERVER; }
@@ -93,7 +94,7 @@ public:
     KNetAddress remote_;
  public:
      s64 last_active_;
-
+     u64 user_data_;
 public:
     void reset_probe()
     {

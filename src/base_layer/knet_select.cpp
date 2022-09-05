@@ -56,6 +56,10 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 
 	if (set_cnt == 0)
 	{
+		if (wait_ms > 0)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
+		}
 		return 0;
 	}
 
