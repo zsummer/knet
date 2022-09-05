@@ -25,7 +25,7 @@
 #include "knet_select.h"
 #include "knet_socket.h"
 #include "knet_session.h"
-#include "knet_rudp.h"
+#include "knet_proto.h"
 
 
 #ifndef KNET_MAX_SESSIONS

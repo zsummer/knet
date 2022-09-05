@@ -24,7 +24,7 @@
 #include "knet_env.h"
 #include "knet_select.h"
 #include "knet_socket.h"
-#include "knet_rudp.h"
+#include "knet_proto.h"
 
 struct KNetConfig
 {
