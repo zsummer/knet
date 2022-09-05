@@ -21,30 +21,27 @@
 
 KNetSocket::KNetSocket(s32 inst_id)
 {
+    memset(this, 0, sizeof(*this));
     KNetEnv::count(KNT_STT_SKT_INSTRUCT_COUNT)++;
     inst_id_ = inst_id;
-    reset();
-    //LogDebug() << *this;
+    skt_ = INVALID_SOCKET;
 }
+
 KNetSocket::~KNetSocket()
 {
     KNetEnv::count(KNT_STT_SKT_DESTRUCT_COUNT)++;
-    if (state_ != KNTS_INVALID || skt_ != INVALID_SOCKET)
+    if (skt_ != INVALID_SOCKET)
     {
         KNetEnv::error_count()++;
     }
-    //LogDebug() << *this;
 }
-
-
-
 
 
 s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port)
 {
-    if (state_ != KNTS_INVALID)
+    if (skt_ != INVALID_SOCKET)
     {
-        return -2;
+        return -1;
     }
     s32 ret = local_.reset(localhost, localport);
     if (ret != 0)
@@ -60,14 +57,13 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
         }
     }
 
-    last_active_ = KNetEnv::now_ms();
     skt_ = socket(local_.family(), SOCK_DGRAM, 0);
     if (skt_ == INVALID_SOCKET)
     {
         return -5;
     }
     
-    state_ = KNTS_INIT;
+
     ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());
     if (ret != 0)
     {
@@ -94,7 +90,6 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 
     KNetEnv::count(KNT_STT_SKT_INIT_COUNT)++;
     local_.reset_from_socket(skt_);
-    state_ = KNTS_BINDED;
     LogInfo() << "bind local:" << local_.debug_string();
     //LogInfo() << *this;
     return 0;
@@ -146,36 +141,13 @@ s32 KNetSocket::recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms
     len = ret;
     KNetEnv::count(KNT_STT_SKT_RCV_COUNT)++;
     KNetEnv::count(KNT_STT_SKT_RCV_BYTES) += ret;
-    last_active_ = now_ms;
+    state_change_ts_ = now_ms;
     return 0;
 }
 
 
 s32 KNetSocket::destroy()
 {
-    if (state_ == KNTS_INVALID)
-    {
-        return 0;
-    }
-
-    if (refs_ > 0 && !(flag_ & KNTF_SERVER))
-    {
-        KNetEnv::error_count()++;
-        return -2;
-    }
-
-    if (refs_ > 1 && (flag_ & KNTF_SERVER))
-    {
-        KNetEnv::error_count()++;
-        return -3;
-    }
-
-    if (refs_ < 0)
-    {
-        KNetEnv::error_count()++;
-        return -4;
-    }
-   
     //LogInfo() << *this;
     if (skt_ != INVALID_SOCKET)
     {
@@ -188,30 +160,9 @@ s32 KNetSocket::destroy()
     }
 
     KNetEnv::count(KNT_STT_SKT_DESTROY_COUNT)++;
-    state_ = KNTS_INVALID;
-    flag_ = KNTF_NONE;
-    refs_ = 0;
-    last_active_ = KNetEnv::now_ms();
     return 0;
 }
 
-
-FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s)
-{
-    if (s.flag_ & KNTF_SERVER)
-    {
-        ls << "server: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)(u64)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string();
-    }
-    else if (s.flag_ & KNTF_CLINET)
-    {
-        ls << "client: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)(u64)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
-    }
-    else
-    {
-        ls << "none: inst_id:" << s.inst_id_ << ", skt:" << s.skt_ << ", state:" << s.state_ << ", flag:" << (void*)(u64)s.flag_ << ", refs:" << s.refs_ << ", local:" << s.local_.debug_string() << ", remote:" << s.remote_.debug_string();
-    }
-    return ls;
-}
 
 
 

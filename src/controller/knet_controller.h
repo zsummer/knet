@@ -122,6 +122,13 @@ private:
 	char* snd_data() { return pkg_snd_ + KNT_UHDR_SIZE; }
 	char* rcv_head() { return pkg_rcv_; }
 	char* rcv_data() { return pkg_rcv_ + KNT_UHDR_SIZE; }
+
+
+private:
+	void skt_reset(KNetSocket&);
+	bool skt_is_server(KNetSocket& s) { return s.flag_ & KNTF_SERVER; }
+	s32  skt_destroy(KNetSocket& s);
+
 private:
 	u32  tick_cnt_;
 	u32 controller_state_;

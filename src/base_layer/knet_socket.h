@@ -27,26 +27,6 @@
 #include "knet_env.h"
 
 
-enum KNTState: u16
-{
-    KNTS_INVALID = 0,
-    KNTS_INIT,
-    KNTS_BINDED,
-    KNTS_CONNECTED,
-    KNTS_HANDSHAKE_PB,
-    KNTS_HANDSHAKE_CH,
-    KNTS_HANDSHAKE_SH,
-    KNTS_ESTABLISHED,
-    KNTS_RST,
-    KNTS_LINGER,
-};
-
-enum KNTFlag : u16
-{
-    KNTF_NONE = 0,
-    KNTF_SERVER = 0x1,
-    KNTF_CLINET =0x2,
-};
 
 
 class KNetSocket
@@ -57,56 +37,34 @@ public:
     friend class KNetSelect;
     KNetSocket(s32 inst_id);
     ~KNetSocket();
-    
     s32 init(const char* localhost, u16 localport, const char* remote_ip, u16 remote_port);
-
     s32 send_packet(const char* pkg_data, s32 len, KNetAddress& remote);
-
     s32 recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms);
-
-
     s32 destroy();
 
 
 public:
-    void reset()
-    {
-        skt_ = INVALID_SOCKET;
-        slot_id_ = 0;
-        state_ = KNTS_INVALID;
-        flag_ = KNTF_NONE;
-        refs_ = 0;
-        client_session_inst_id_ = -1;
-        last_active_ = KNetEnv::now_ms(); 
-        user_data_ = 0;
-        reset_probe();
-    }
-    bool is_server() const { return flag_ & KNTF_SERVER; }
-
+    s32 inst_id()const { return inst_id_; }
+    SOCKET skt() const { return skt_; }
+    KNetAddress& local() { return local_; }
+    const KNetAddress& local() const { return local_; }
+    KNetAddress& remote() { return remote_; }
+    const KNetAddress& remote() const { return remote_; }
+private:
     s32 inst_id_;
+    SOCKET skt_;
+    KNetAddress local_;
+    KNetAddress remote_;
+
+    //up param
+public:
     u8  slot_id_;
     s32 refs_;
     s32 client_session_inst_id_;
     u16 state_;
     u16 flag_;
-    SOCKET skt_;
-    KNetAddress local_;
-    KNetAddress remote_;
- public:
-     s64 last_active_;
-     u64 user_data_;
-public:
-    void reset_probe()
-    {
-        probe_seq_id_ = 0;
-        probe_last_ping_ = 0;
-        probe_avg_ping_ = 0;
-        probe_snd_cnt_ = 0;
-        probe_rcv_cnt_ = 0;
-        probe_shake_id_ = 0;
-    }
-
-public:
+    s64 state_change_ts_;
+    u64 user_data_;
     u64 probe_seq_id_;
     s64 probe_last_ping_;
     s64 probe_avg_ping_;

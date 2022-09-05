@@ -18,10 +18,10 @@ s32 test_socket_bind()
 	KNetSocket s2(2);
 	s32 ret = s1.init("0.0.0.0", 0, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
-	ret = s2.init("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
+	ret = s2.init("0.0.0.0", s1.local().port(), "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
 	s1.destroy();
-	ret = s2.init("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
+	ret = s2.init("0.0.0.0", s1.local().port(), "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
 	s2.destroy();
 	KNetAssert(KNetEnv::error_count() == 0, "");

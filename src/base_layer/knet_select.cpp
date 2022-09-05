@@ -36,21 +36,15 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 	s32 set_cnt = 0;
 	for (auto& s : sets)
 	{
-		if (s.state_ < KNTS_BINDED || s.state_ >= KNTS_LINGER)
+		if (s.skt() == INVALID_SOCKET)
 		{
 			continue;
 		}
-		if (s.skt_ == INVALID_SOCKET)
+		if (s.skt() > max_fd)
 		{
-			KNetEnv::error_count()++;
-			LogError() << "error";
-			continue;
+			max_fd = s.skt();
 		}
-		if (s.skt_ > max_fd)
-		{
-			max_fd = s.skt_;
-		}
-		FD_SET(s.skt_, &rdfds);
+		FD_SET(s.skt(), &rdfds);
 		set_cnt++;
 	}
 
@@ -78,18 +72,14 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 	s64 post_now_ms = KNetEnv::now_ms();
 	for (auto& s : sets)
 	{
-		if (s.state_ < KNTS_BINDED || s.state_ >= KNTS_LINGER)
-		{
-			continue;
-		}
-		if (s.skt_ == INVALID_SOCKET)
+		if (s.skt() == INVALID_SOCKET)
 		{
 			KNetEnv::error_count()++;
 			LogError() << "error";
 			continue;
 		}
 
-		if (FD_ISSET(s.skt_, &rdfds))
+		if (FD_ISSET(s.skt(), &rdfds))
 		{
 			on_readable(s, post_now_ms);
 		}

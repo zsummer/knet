@@ -26,6 +26,29 @@
 #include <functional>
 
 
+enum KNTState : u16
+{
+	KNTS_INVALID = 0,
+	KNTS_INIT,
+	KNTS_BINDED,
+	KNTS_CONNECTED,
+	KNTS_HANDSHAKE_PB,
+	KNTS_HANDSHAKE_CH,
+	KNTS_HANDSHAKE_SH,
+	KNTS_ESTABLISHED,
+	KNTS_RST,
+	KNTS_LINGER,
+};
+
+enum KNTFlag : u16
+{
+	KNTF_NONE = 0,
+	KNTF_SERVER = 0x1,
+	KNTF_CLINET = 0x2,
+};
+
+
+
 static inline char* ikcp_encode64u(char* p, IUINT64 l)
 {
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN

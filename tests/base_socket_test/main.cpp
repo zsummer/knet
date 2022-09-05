@@ -18,11 +18,11 @@ s32 test_socket_bind()
 	KNetSocket s2(2);
 	s32 ret = s1.init("0.0.0.0", 0, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
-	KNetAssert(s1.local_.port() != 0, "");
-	ret = s2.init("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
+	KNetAssert(s1.local().port() != 0, "");
+	ret = s2.init("0.0.0.0", s1.local().port(), "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
 	s1.destroy();
-	ret = s2.init("0.0.0.0", s1.local_.port(), "127.0.0.1", 8080);
+	ret = s2.init("0.0.0.0", s1.local().port(), "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
 	s2.destroy();
 	KNetAssert(KNetEnv::error_count() == 0, "");
@@ -35,9 +35,9 @@ s32 test_socket_snd_no_port()
 	KNetSocket s1(1);
 	s32 ret = s1.init("0.0.0.0", 0, "127.0.0.1", 18080);
 	KNetAssert(ret == 0, "");
-	KNetAssert(s1.local_.port() != 0, "");
+	KNetAssert(s1.local().port() != 0, "");
 
-	ret = s1.send_packet("12345", 6, s1.remote_);
+	ret = s1.send_packet("12345", 6, s1.remote());
 	KNetAssert(ret == 0, "");
 	LogDebug() << "s1 send 12345";
 
@@ -52,7 +52,7 @@ s32 test_socket_rcv_no_data()
 	KNetSocket s1(1);
 	s32 ret = s1.init("0.0.0.0", 0, "127.0.0.1", 18080);
 	KNetAssert(ret == 0, "");
-	KNetAssert(s1.local_.port() != 0, "");
+	KNetAssert(s1.local().port() != 0, "");
 
 	char buf[10] = { 0 };
 	s32 len = 10;
@@ -75,13 +75,13 @@ s32 test_socket_snd_rcv()
 	KNetSocket s2(2);
 	s32 ret = s1.init("0.0.0.0", 0, "127.0.0.1", 18080);
 	KNetAssert(ret == 0, "");
-	KNetAssert(s1.local_.port() != 0, "");
+	KNetAssert(s1.local().port() != 0, "");
 
-	ret = s2.init("0.0.0.0", 18080, "127.0.0.1", s1.local_.port());
+	ret = s2.init("0.0.0.0", 18080, "127.0.0.1", s1.local().port());
 	KNetAssert(ret == 0, "");
-	KNetAssert(s2.local_.port() != 0, "");
+	KNetAssert(s2.local().port() != 0, "");
 
-	ret = s1.send_packet("12345", 6, s1.remote_);
+	ret = s1.send_packet("12345", 6, s1.remote());
 	KNetAssert(ret == 0, "");
 	LogDebug() << "s1 send 12345";
 
@@ -130,11 +130,11 @@ s32 test_socket_snd_rcv_with_select()
 
 	s32 ret = s1.init("0.0.0.0", 0, "127.0.0.1", 18080);
 	KNetAssert(ret == 0, "");
-	KNetAssert(s1.local_.port() != 0, "");
+	KNetAssert(s1.local().port() != 0, "");
 
-	ret = s2.init("0.0.0.0", 18080, "127.0.0.1", s1.local_.port());
+	ret = s2.init("0.0.0.0", 18080, "127.0.0.1", s1.local().port());
 	KNetAssert(ret == 0, "");
-	KNetAssert(s2.local_.port() != 0, "");
+	KNetAssert(s2.local().port() != 0, "");
 
 	SelectTest st;
 	ret = st.do_select(skts, 0);
@@ -142,7 +142,7 @@ s32 test_socket_snd_rcv_with_select()
 	KNetAssert(s1.user_data_ == 0, "");
 	KNetAssert(s2.user_data_ == 0, "");
 
-	ret = s1.send_packet("12345", 6, s1.remote_);
+	ret = s1.send_packet("12345", 6, s1.remote());
 	KNetAssert(ret == 0, "");
 	LogDebug() << "s1 send 12345";
 
@@ -212,11 +212,11 @@ s32 test_socket_select()
 
 	ret = s1.init("0.0.0.0", 0, "127.0.0.1", 18080);
 	KNetAssert(ret == 0, "");
-	KNetAssert(s1.local_.port() != 0, "");
+	KNetAssert(s1.local().port() != 0, "");
 
-	ret = s2.init("0.0.0.0", 18080, "127.0.0.1", s1.local_.port());
+	ret = s2.init("0.0.0.0", 18080, "127.0.0.1", s1.local().port());
 	KNetAssert(ret == 0, "");
-	KNetAssert(s2.local_.port() != 0, "");
+	KNetAssert(s2.local().port() != 0, "");
 	if (true)
 	{
 		s64 now = KNetEnv::now_ms();
