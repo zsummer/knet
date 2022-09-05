@@ -85,6 +85,7 @@ s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 		on_echo(s, hdr, p, len - KNetHeader::HDR_SIZE, remote, now_ms);
 		break;
 	default:
+		LogWarn() << "unknown packet:" << hdr;
 		break;
 	}
 	return len;
@@ -351,7 +352,7 @@ int KNetController::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user
 		return -2;
 	}
 
-	s32 ret = controller->send_psh(controller->sessions_[inst_id], buf, len);
+	s32 ret = controller->send_psh(controller->sessions_[inst_id], 0, buf, len);
 	return ret;
 }
 
@@ -614,6 +615,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 				iter->second->slots_[hdr.slot].inst_id_ = s.inst_id();
 				s.refs_++;
 			}
+			LogInfo() << "on client new ch(already established): session_id:" << iter->second->session_id_ <<" " << hdr;
 			return;
 		}
 		return;
@@ -634,7 +636,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	handshakes_s_[ch.shake_id] = session;
 	establisheds_s_[session->session_id_] = session;
 
-	LogInfo() << "server established sucess";
+	LogInfo() << "server established sucess: session_id:" << session->session_id_ << hdr;
 
 	KNetSH sh;
 	sh.noise = 0;
@@ -696,25 +698,26 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 		nss_[slot.inst_id_].state_ = KNTS_ESTABLISHED;
 	}
 
-	LogInfo() << "client established sucess";
+	LogInfo() << "client established sucess. " << hdr;
 
 	if (session.on_connected_)
 	{
 		auto on = session.on_connected_;
 		session.on_connected_ = nullptr;
+
 		on(session, true, session.state_, 0);
 	}
 	//send_psh(session, "123", 4);
 }
 
 
-s32 KNetController::send_psh(KNetSession& s, const char* psh_buf, s32 len)
+s32 KNetController::send_psh(KNetSession& s, u8 chl, const char* psh_buf, s32 len)
 {
 	KNetHeader hdr;
 	hdr.reset();
 	memcpy(snd_data(), psh_buf, len);
 	set_snd_data_offset(snd_data() + len);
-	make_hdr(hdr, s.session_id_, ++s.snd_pkt_id_, 0, 0, KNETCMD_PSH, 0);
+	make_hdr(hdr, s.session_id_, ++s.snd_pkt_id_, 0, chl, KNETCMD_PSH, 0);
 	write_hdr(hdr);
 	s32 send_cnt = 0;
 	for (auto& slot : s.slots_)
@@ -734,6 +737,12 @@ s32 KNetController::send_psh(KNetSession& s, const char* psh_buf, s32 len)
 
 void KNetController::on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
+	if (s.state_ != KNTS_ESTABLISHED)
+	{
+		LogWarn() << "skt not established on psh. " << hdr;
+		return;
+	}
+
 	KNetSession* session = NULL;
 	if (skt_is_server(s))
 	{
@@ -742,40 +751,64 @@ void KNetController::on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32
 		{
 			session = iter->second;
 		}
+		else
+		{
+			LogWarn() << "server on_psh no session. " << hdr;;
+			return;
+		}
 	}
 	else
 	{
 		if (s.client_session_inst_id_ < 0 || s.client_session_inst_id_ > (s32)sessions_.size())
 		{
-			LogError() << "on_psh error";
+			LogError() << "client on_psh error. " << hdr;;
 			return;
 		}
 		session = &sessions_[s.client_session_inst_id_];
 	}
 	if (session == NULL)
 	{
-		LogError() << "on_psh error";
+		LogError() << "on_psh error. skt is server:" << skt_is_server(s) <<", session id:" << hdr.session_id;
 		return;
 	}
 
 	if (session->state_ != KNTS_ESTABLISHED)
 	{
-		LogError() << "on_psh state error";
+		LogError() << "socket on_psh state error. server:" << skt_is_server(s) <<", " << hdr;
 		return;
 	}
-
-	if (hdr.slot < session->slots_.size())
+	if (skt_is_server(s))
 	{
+		if (hdr.slot >= session->slots_.size())
+		{
+			LogError() << "socket on_psh slot too max. server:" << skt_is_server(s) << ", " << hdr;
+			return;
+		}
+
+		if (session->slots_[hdr.slot].inst_id_ == -1)
+		{
+			LogWarn() << "socket on_psh slot not handshark. server:" << skt_is_server(s) << ", " << hdr;
+			session->slots_[hdr.slot].inst_id_ = s.inst_id();
+			s.refs_++;
+		}
 		session->slots_[hdr.slot].remote_ = remote;
 	}
+
 
 	on_psh(*session, hdr, pkg, len, remote, now_ms);
 }
 
 void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
-	ikcp_input(s.kcp_, pkg, len);
-	LogDebug() << "session on psh";
+	if (hdr.chl == 0)
+	{
+		ikcp_input(s.kcp_, pkg, len);
+		LogDebug() << "session on psh chl 0.";
+	}
+	else if (on_data_)
+	{
+		on_data_(s, hdr.chl, pkg, len, now_ms);
+	}
 }
 
 s32 KNetController::send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote)
@@ -1006,10 +1039,12 @@ s32 KNetController::close_session(s32 inst_id)
 	if (session.state_ == KNTS_ESTABLISHED)
 	{
 		session.state_ = KNTS_RST;
+		LogInfo() << "session:" << session.session_id_ << " has rst";
 	}
 	else
 	{
 		session.state_ = KNTS_LINGER;
+		LogInfo() << "session:" << session.session_id_ << " to linger";
 	}
 
 	if (session.flag_ & KNTF_SERVER)
@@ -1170,12 +1205,22 @@ s32 KNetController::do_tick()
 
 void KNetController::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms)
 {
-	LogDebug() << "recv kcp data:" << data;
+	if (on_data_)
+	{
+		on_data_(s, 0, data, len, now_ms);
+	}
 }
 
-void KNetController::send_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms)
+void KNetController::send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
 {
-	ikcp_send(s.kcp_, data, len);
+	if (chl == 0)
+	{
+		ikcp_send(s.kcp_, data, len);
+	}
+	else
+	{
+		send_psh(s, chl, data, len);
+	}
 }
 
 

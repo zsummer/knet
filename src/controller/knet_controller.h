@@ -46,11 +46,17 @@ public:
 	KNetController();
 	~KNetController();
 
-
-
+public:
+	KNetOnAccept set_on_accept(KNetOnAccept on_accept) { KNetOnAccept old = on_accept_; on_accept_ = on_accept; return old; }
+	KNetOnDisconnect set_on_disconnect(KNetOnDisconnect on_disconnect) { KNetOnDisconnect old = on_disconnect_; on_disconnect_ = on_disconnect; return old; }
+	KNetOnData set_on_data(KNetOnData on_data) { KNetOnData old = on_data_; on_data_ = on_data; return old; }
+private:
+	KNetOnAccept on_accept_;
+	KNetOnDisconnect on_disconnect_;
+	KNetOnData on_data_;
+public:
 	s32 start_server(const KNetConfigs& configs);
 
-public:
 	s32 create_connect(const KNetConfigs& configs, KNetSession*& session);
 	s32 start_connect(KNetSession& session, KNetOnConnect on_connected, s64 timeout);
 	s32 restart_connect(KNetSession*& session);
@@ -69,13 +75,8 @@ private:
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
 	
 
-
-
-
-
 public:
-	void send_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
-
+	void send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms);
 
 	void on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
 
@@ -96,7 +97,7 @@ private:
 	s32 send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, KNetAddress& remote);
 	void on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
-	s32 send_psh(KNetSession& s, const char* psh_buf, s32 len);
+	s32 send_psh(KNetSession& s, u8 chl, const char* psh_buf, s32 len);
 	void on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 	void on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 

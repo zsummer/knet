@@ -26,6 +26,7 @@
 #include <functional>
 
 
+
 enum KNTState : u16
 {
 	KNTS_INVALID = 0,
@@ -392,6 +393,10 @@ static inline const char* knet_decode_packet(const char* p, KNetSH& pkt)
 }
 
 
+inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetHeader& hdr)
+{
+	return ls << "[session_id:" << hdr.session_id << ", pkt id:" << hdr.pkt_id << ", pkt len:" << hdr.pkt_size << ", chl:" << hdr.chl << ", cmd:" << hdr.cmd << ", slot:" << hdr.slot << "]";
+}
 
 
 class KNetSession;
@@ -400,7 +405,8 @@ using KNetOnConnect = std::function<void(KNetSession& session, bool connected, u
 using KNetOnAccept = std::function<void(KNetSession& session, s32 code)>;
 using KNetOnDisconnect = std::function<void(KNetSession& session, s32 code)>;
 
-using KNetOnKcpData = std::function<void(KNetSession& s, const char* data, s32 len, s64 now_ms)>;
+//chl 0 is kcp  
+using KNetOnData = std::function<void(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)>;
 
 
 

@@ -64,7 +64,7 @@ s32 test_session_connect_mix()
 
 
 
-	controller.send_kcp_data(*session, "12345", 6, KNetEnv::now_ms());
+	controller.send_data(*session, 0, "12345", 6, KNetEnv::now_ms());
 	for (size_t i = 0; i < 1; i++)
 	{
 		ret = controller.do_tick();
@@ -178,7 +178,7 @@ s32 test_session_connect()
 	KNetAssert(connect_tested == 0, "");
 
 
-	controller2.send_kcp_data(*session, "12345", 6, KNetEnv::now_ms());
+	controller2.send_data(*session, 0, "12345", 6, KNetEnv::now_ms());
 	for (size_t i = 0; i < 1; i++)
 	{
 		ret = controller1.do_tick();
