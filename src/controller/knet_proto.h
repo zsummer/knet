@@ -30,11 +30,9 @@ enum KNTState : u16
 {
 	KNTS_INVALID = 0,
 	KNTS_INIT,
-	KNTS_BINDED,
-	KNTS_CONNECTED,
-	KNTS_HANDSHAKE_PB,
-	KNTS_HANDSHAKE_CH,
-	KNTS_HANDSHAKE_SH,
+	KNTS_PROBE,
+	KNTS_CH,
+	KNTS_SH,
 	KNTS_ESTABLISHED,
 	KNTS_RST,
 	KNTS_LINGER,
@@ -397,7 +395,7 @@ static inline const char* knet_decode_packet(const char* p, KNetSH& pkt)
 
 
 class KNetSession;
-using KNetOnConnect = std::function<void(KNetSession& session, bool connected, s32 error_code)>;
+using KNetOnConnect = std::function<void(KNetSession& session, bool connected, u16 state, s64 time_out)>;
 
 
 

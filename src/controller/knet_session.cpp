@@ -55,8 +55,10 @@ s32 KNetSession::reset()
 	for (auto& slot : slots_)
 	{
 		slot.inst_id_ = -1;
-		slot.last_active_ = 0;
 	}
+	connect_time_ = 0;
+	connect_expire_time_ = 0;
+	on_connected_ = NULL;
 	return 0;
 }
 
@@ -98,10 +100,6 @@ s32 KNetSession::destory()
 }
 
 
-s32 KNetSession::on_tick(s64 now_ms)
-{
-	return 0;
-}
 
 
 

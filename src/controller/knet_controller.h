@@ -48,7 +48,7 @@ public:
 
 public:
 	s32 create_connect(const KNetConfigs& configs, KNetSession*& session);
-	s32 start_connect(KNetSession& session, KNetOnConnect on_connected);
+	s32 start_connect(KNetSession& session, KNetOnConnect on_connected, s64 timeout);
 	s32 restart_connect(KNetSession*& session);
 	s32 close_connect(KNetSession* session);
 	s32 remove_connect(KNetSession* session);
@@ -105,11 +105,7 @@ public:
 private:
 
 	s32 send_packet(KNetSocket&, char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
-	KNetSession* create_session();
-	s32 destroy_session(KNetSession* session);
 
-	KNetSocket* create_stream();
-	s32 destroy_stream(KNetSocket*);
 
 	s32 check_hdr(KNetHeader& hdr, const char* data, s32 len);
 	s32 make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len);
@@ -126,8 +122,20 @@ private:
 
 private:
 	void skt_reset(KNetSocket&);
-	bool skt_is_server(KNetSocket& s) { return s.flag_ & KNTF_SERVER; }
+
+	KNetSocket* skt_create();
 	s32  skt_destroy(KNetSocket& s);
+	
+	KNetSession* create_session();
+	s32 destroy_session(KNetSession* session);
+
+
+public:
+	bool skt_is_server(KNetSocket& s) { return s.flag_ & KNTF_SERVER; }
+	KNetSockets& nss() { return nss_; }
+	KNetSessions& sessions() { return sessions_; }
+	std::unordered_map<u64, KNetSession*>& handshakes_s() { return handshakes_s_; }
+	std::unordered_map<u64, KNetSession*>& establisheds_s() { return establisheds_s_; }
 
 private:
 	u32  tick_cnt_;

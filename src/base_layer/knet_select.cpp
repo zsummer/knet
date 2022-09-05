@@ -74,8 +74,6 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 	{
 		if (s.skt() == INVALID_SOCKET)
 		{
-			KNetEnv::error_count()++;
-			LogError() << "error";
 			continue;
 		}
 

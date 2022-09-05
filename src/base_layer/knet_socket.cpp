@@ -90,7 +90,7 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 
     KNetEnv::count(KNT_STT_SKT_INIT_COUNT)++;
     local_.reset_from_socket(skt_);
-    LogInfo() << "bind local:" << local_.debug_string();
+    //LogInfo() << "bind local:" << local_.debug_string();
     //LogInfo() << *this;
     return 0;
 }
@@ -134,7 +134,7 @@ s32 KNetSocket::recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms
     if (ret < 0)
     {
         len = 0;
-        LogError() << "error:" << KNetEnv::error_code();
+        //LogError() << "error:" << KNetEnv::error_code();
         return -1;
     }
 

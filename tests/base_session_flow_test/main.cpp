@@ -35,8 +35,9 @@ s32 test_session_connect_mix()
 	KNetSession* session = NULL;
 	ret = controller.create_connect(mc, session);
 	KNetAssert(ret == 0, "");
+	KNetAssert(session != NULL, "");
 	s32 connect_tested = 1;
-	KNetOnConnect on_connect = [&](KNetSession& session, bool connected, s32 error_code)
+	KNetOnConnect on_connect = [&](KNetSession& session, bool connected, u16 state, s64 time_out)
 	{
 		connect_tested = 0;
 		if (!connected)
@@ -45,13 +46,22 @@ s32 test_session_connect_mix()
 		}
 	};
 
-	ret = controller.start_connect(*session, on_connect);
+	ret = controller.start_connect(*session, on_connect, 50000);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller.do_tick();
 		KNetAssert(ret == 0, "");
+		if (connect_tested == 0)
+		{
+			LogInfo() << "first connected  select :" << i << " c";
+		}
+		bool all_socket_connect = 0;
+		if (true)
+		{
+
+		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	KNetAssert(connect_tested == 0, "");

@@ -58,19 +58,20 @@ private:
 
     //up param
 public:
+    u16 state_;
+    u16 flag_;
     u8  slot_id_;
     s32 refs_;
     s32 client_session_inst_id_;
-    u16 state_;
-    u16 flag_;
     s64 state_change_ts_;
-    u64 user_data_;
+
     u64 probe_seq_id_;
     s64 probe_last_ping_;
     s64 probe_avg_ping_;
     u32 probe_snd_cnt_;
     u32 probe_rcv_cnt_;
     u64 probe_shake_id_;
+    u64 user_data_;
 };
 
 

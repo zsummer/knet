@@ -46,7 +46,6 @@ struct KNetSocketSlot
 {
 	s32 inst_id_;
 	KNetAddress remote_;
-	s64 last_active_;
 };
 
 class KNetController;
@@ -60,7 +59,7 @@ public:
 	s32 reset();
 	s32 init(KNetController& c, u16 flag = KNTF_SERVER);
 	s32 destory();
-	s32 on_tick(s64 now_ms);
+
 public:
 	bool is_server() {return flag_ & KNTF_SERVER;}
 public:
@@ -81,6 +80,8 @@ public:
 	char box_[16];
 	std::array<KNetSocketSlot, KNT_MAX_SLOTS> slots_;
 
+	s64 connect_time_;
+	s64 connect_expire_time_;
 	KNetOnConnect on_connected_;
 };
 
