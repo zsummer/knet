@@ -96,6 +96,11 @@ s32 KNetSession::init(KNetController& c, u16 flag)
 s32 KNetSession::destory()
 {
 	state_ = KNTS_INVALID;
+	if (kcp_ != NULL)
+	{
+		delete kcp_;
+		kcp_ = NULL;
+	}
 	return reset();
 }
 

@@ -28,10 +28,6 @@
 #include "knet_proto.h"
 
 
-#ifndef KNET_MAX_SESSIONS
-#define KNET_MAX_SESSIONS 10
-#endif // KNET_MAX_SESSIONS
-static_assert(KNET_MAX_SESSIONS >= 10, "");
 
 
 class KNetSession;

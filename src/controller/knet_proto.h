@@ -26,6 +26,13 @@
 #include <functional>
 
 
+
+#ifndef KNET_MAX_SESSIONS
+#define KNET_MAX_SESSIONS 2000
+#endif // KNET_MAX_SESSIONS
+static_assert(KNET_MAX_SESSIONS >= 10, "");
+
+
 //============================================================================
 
 enum KNTState : u16
@@ -185,6 +192,8 @@ static_assert(sizeof(KNetHeader) % 8 == 0, "");
 //============================================================================
 static const s32 KNT_UHDR_SIZE = KNetHeader::HDR_SIZE;
 static const s32 KNT_UDAT_SIZE = KNT_UPKT_SIZE - KNT_UHDR_SIZE - (KNT_UPKT_SIZE - KNT_UHDR_SIZE)%16;
+const IUINT32 IKCP_OVERHEAD = 24;
+static const s32 KNT_KCP_DATA_SIZE = KNT_UDAT_SIZE - IKCP_OVERHEAD;
 //============================================================================
 
 

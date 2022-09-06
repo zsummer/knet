@@ -23,12 +23,7 @@
 #include <chrono>
 #include "knet_env.h"
 
-#ifndef KNET_MAX_SOCKETS
-#define KNET_MAX_SOCKETS 10
-#endif // KNET_MAX_SOCKETS
 
-static_assert(KNET_MAX_SOCKETS >= 10, "");
-static_assert(KNET_MAX_SOCKETS < 1024, "");
 
 class KNetSocket;
 using KNetSockets = zarray<KNetSocket, KNET_MAX_SOCKETS>;

@@ -75,9 +75,6 @@ public:
 };
 
 
-FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& s);
-
-
 
 
 

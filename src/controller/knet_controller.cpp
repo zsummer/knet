@@ -170,7 +170,7 @@ s32 KNetController::start_server(const KNetConfigs& configs)
 			break;
 		}
 
-		LogInfo() << "init " << c.localhost << ":" << c.localport << " success";
+		LogDebug() << "init " << c.localhost << ":" << c.localport << " success";
 		ns->state_ = KNTS_ESTABLISHED;
 		ns->refs_++;
 		ns->flag_ |= KNTF_SERVER;
@@ -263,7 +263,7 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 			continue;
 		}
 
-		LogInfo() << "init " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " success";
+		LogDebug() << "init " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << " success";
 		ns->state_ = KNTS_INIT;
 		ns->flag_ = KNTF_CLINET;
 		ns->slot_id_ = i;
@@ -643,12 +643,16 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 				if (iter->second->slots_[hdr.slot].inst_id_ != s.inst_id())
 				{
 					nss_[iter->second->slots_[hdr.slot].inst_id_].refs_--;
+					iter->second->slots_[hdr.slot].remote_ = remote;
+					iter->second->slots_[hdr.slot].inst_id_ = s.inst_id();
+					s.refs_++;
 				}
-				iter->second->slots_[hdr.slot].remote_ = remote;
-				iter->second->slots_[hdr.slot].inst_id_ = s.inst_id();
-				s.refs_++;
+				else
+				{
+					iter->second->slots_[hdr.slot].remote_ = remote;
+				}
 			}
-			LogInfo() << "on client new ch(already established): session_id:" << iter->second->session_id_ <<" " << hdr;
+			LogDebug() << "on client new ch(already established): session_id:" << iter->second->session_id_ <<" " << hdr;
 			return;
 		}
 		return;
@@ -671,7 +675,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	handshakes_s_[ch.shake_id] = session;
 	establisheds_s_[session->session_id_] = session;
 
-	LogInfo() << "server established sucess: session_id:" << session->session_id_ << hdr;
+	LogDebug() << "server established sucess: session_id:" << session->session_id_ << hdr;
 
 	KNetSH sh;
 	sh.noise = 0;
@@ -738,7 +742,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 		nss_[slot.inst_id_].state_ = KNTS_ESTABLISHED;
 	}
 
-	LogInfo() << "client established sucess. " << hdr;
+	LogDebug() << "client established sucess. " << hdr;
 
 	if (session.on_connected_)
 	{
@@ -843,7 +847,7 @@ void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s3
 	if (hdr.chl == 0)
 	{
 		ikcp_input(s.kcp_, pkg, len);
-		LogDebug() << "session on psh chl 0.";
+		//LogDebug() << "session on psh chl 0.";
 	}
 	else if (on_data_)
 	{
@@ -878,7 +882,7 @@ s32 KNetController::send_rst(KNetSession& s, s32 code)
 		{
 			continue;
 		}
-		LogInfo() << "session:" << s.session_id_ << " send rst used slot:" << nss_[slot.inst_id_].slot_id_;
+		LogDebug() << "session:" << s.session_id_ << " send rst used slot:" << nss_[slot.inst_id_].slot_id_;
 		send_packet(nss_[slot.inst_id_], snd_head(), snd_len(), slot.remote_, KNetEnv::now_ms());
 		send_cnt++;
 	}
@@ -939,7 +943,7 @@ void KNetController::on_rst(KNetSession& s, KNetHeader& hdr, s32 code, KNetAddre
 	{
 		return;
 	}
-	LogInfo() << "session on rst:" << hdr <<" rst code:" << code;
+	LogDebug() << "session on rst:" << hdr <<" rst code:" << code;
 
 	close_session(s.inst_id_, true, code);
 	//to do callback   
@@ -1089,12 +1093,12 @@ s32 KNetController::close_session(s32 inst_id, bool passive, s32 code)
 		if (passive)
 		{
 			session.state_ = KNTS_RST;
-			LogInfo() << "session:" << session.session_id_ << " to passive rst";
+			LogDebug() << "session:" << session.session_id_ << " to passive rst";
 		}
 		else
 		{
 			session.state_ = KNTS_LINGER;
-			LogInfo() << "session:" << session.session_id_ << " to linger";
+			LogDebug() << "session:" << session.session_id_ << " to linger";
 		}
 
 		if (on_disconnect_)
@@ -1105,7 +1109,7 @@ s32 KNetController::close_session(s32 inst_id, bool passive, s32 code)
 	else
 	{
 		session.state_ = KNTS_LINGER;
-		LogInfo() << "session:" << session.session_id_ << " to linger";
+		LogDebug() << "session:" << session.session_id_ << " to linger";
 	}
 	return 0;
 }
@@ -1309,7 +1313,7 @@ KNetSocket* KNetController::skt_create()
 	for (u32 i = 0; i < nss_.size(); i++)
 	{
 		KNetSocket& s = nss_[i];
-		if (s.state_ == KNTS_INVALID)
+		if (s.state_ == KNTS_INVALID || s.state_ == KNTS_RST || s.state_ == KNTS_LINGER)
 		{
 			KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT)++;
 			skt_reset(s);
