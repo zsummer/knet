@@ -160,7 +160,12 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	LogInfo() << "AVG SECOND KNT_STT_SKT_RCV_COUNT:" << KNetEnv::count(KNT_STT_SKT_RCV_COUNT) / ((finish_now - now) / 1000);
 	LogInfo() << "AVG SECOND KNT_STT_SKT_SND_BYTES:" << KNetEnv::count(KNT_STT_SKT_SND_BYTES) / ((finish_now - now) / 1000);
 	LogInfo() << "AVG SECOND KNT_STT_SKT_RCV_BYTES:" << KNetEnv::count(KNT_STT_SKT_RCV_BYTES) / ((finish_now - now) / 1000);
-
+	for (s32 i = 0; i < 10; i++)
+	{
+		LogInfo() << "turbo[" << i << "] established session:" << turbos[i]->get_session_count_by_state(KNTS_ESTABLISHED);
+		LogInfo() << "turbo[" << i << "] established socket:" << turbos[i]->get_socket_count_by_state(KNTS_ESTABLISHED);
+	}
+	KNetEnv::print_count();
 
 	for (s32 i = 0; i < 10; i++)
 	{

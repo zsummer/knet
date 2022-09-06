@@ -319,6 +319,7 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 		session.active_time_ = KNetEnv::now_ms();
 		session.connect_time_ = session.active_time_;
 		session.connect_expire_time_ = session.active_time_ + timeout;
+		KNetEnv::count(KNT_STT_SES_CONNECTED)++;
 		return 0;
 	}
 	close_session(session.inst_id_, false, KNTA_FLOW_FAILED);
@@ -437,6 +438,7 @@ s32  KNetController::send_probe(KNetSocket& s)
 	KNetEnv::fill_device_info(probe.dvi);
 	probe.client_ms = KNetEnv::now_ms();
 	probe.client_seq_id = s.probe_seq_id_;
+	probe.shake_id = 0;
 
 
 	set_snd_data_offset(knet_encode_packet(snd_data(), probe));
@@ -528,7 +530,6 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 		return;
 	}
 
-	s.probe_rcv_cnt_++;
 	s.probe_last_ping_ = delay / 2;
 	if (s.probe_avg_ping_ > 0)
 	{
@@ -706,7 +707,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	memcpy(sh.sg, session->sg_, sizeof(sh.sg));
 	memcpy(sh.sp, session->sp_, sizeof(sh.sp));
 	send_sh(s, ch, sh, remote);
-	
+	KNetEnv::count(KNT_STT_SES_ON_ACCEPT)++;
 	if (on_accept_)
 	{
 		on_accept_(*this, *session);
@@ -764,7 +765,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	}
 
 	LogDebug() << "client established sucess. " << hdr;
-
+	KNetEnv::count(KNT_STT_SES_ON_CONNECTED)++;
 	if (session.on_connected_)
 	{
 		auto on = session.on_connected_;
@@ -1272,7 +1273,7 @@ s32 KNetController::do_tick()
 			}
 			else
 			{
-				if (session.state_ == KNTS_PROBE)
+				if (session.state_ == KNTS_PROBE && false)
 				{
 					for (auto& s : session.slots_)
 					{
@@ -1280,9 +1281,9 @@ s32 KNetController::do_tick()
 						{
 							continue;
 						}
-						if (abs(nss_[s.inst_id_].last_send_ts_ - now_ms) > 500 && abs(nss_[s.inst_id_].last_recv_ts_ - now_ms) > 500)
+						if (abs(nss_[s.inst_id_].last_send_ts_ - now_ms) > 1500 && abs(nss_[s.inst_id_].last_recv_ts_ - now_ms) > 1500)
 						{
-							LogInfo() << "try send more probe ";
+							LogWarn() << "try send more probe. session inst:" << session.inst_id_ <<", slot:" << nss_[s.inst_id_].slot_id_ << ", ns inst_id:" << s.inst_id_;
 							send_probe(nss_[s.inst_id_]);
 						}
 					}
@@ -1333,18 +1334,9 @@ void KNetController::send_data(KNetSession& s, u8 chl, const char* data, s32 len
 
 void KNetController::skt_reset(KNetSocket&s)
 {
-	s.slot_id_ = 0;
-	s.state_ = KNTS_INVALID;
-	s.flag_ = KNTF_NONE;
-	s.refs_ = 0;
-	s.client_session_inst_id_ = -1;
-	s.user_data_ = 0;
-	s.probe_seq_id_ = 0;
-	s.probe_last_ping_ = 0;
-	s.probe_avg_ping_ = 0;
-	s.probe_snd_cnt_ = 0;
-	s.probe_rcv_cnt_ = 0;
-	s.probe_shake_id_ = 0;
+	s32 inst_id = s.inst_id_;
+	memset(&s, 0, sizeof(s));
+	s.inst_id_ = inst_id;
 }
 
 

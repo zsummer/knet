@@ -38,6 +38,16 @@ void KNetEnv::clean_count()
     memset(g_knet_status, 0, sizeof(g_knet_status));
 }
 
+void KNetEnv::print_count()
+{
+    for (s32 i = 0; i < KNT_STT_MAX; i++)
+    {
+        if (g_knet_status[i] > 0)
+        {
+            LogInfo() << "knet env count[" << i << "]: " << g_knet_status[i];
+        }
+    }
+}
 u64 KNetEnv::create_seq_id()
 {
     static u64 seq_id = 0;
