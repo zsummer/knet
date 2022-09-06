@@ -42,6 +42,9 @@ public:
     s32 recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms);
     s32 destroy();
 
+public:
+    s32 set_skt_recv_buffer(s32 size);
+    s32 set_skt_send_buffer(s32 size);
 
 public:
     s32 inst_id()const { return inst_id_; }
@@ -50,12 +53,18 @@ public:
     const KNetAddress& local() const { return local_; }
     KNetAddress& remote() { return remote_; }
     const KNetAddress& remote() const { return remote_; }
+
 private:
     s32 inst_id_;
     SOCKET skt_;
     KNetAddress local_;
     KNetAddress remote_;
-
+    u64 probe_snd_cnt_;
+    u64 probe_rcv_cnt_;
+    u64 probe_snd_bytes_;
+    u64 probe_rcv_bytes_;
+    s64 last_send_ts_;
+    s64 last_recv_ts_;
     //up param
 public:
     u16 state_;
@@ -63,15 +72,19 @@ public:
     u8  slot_id_;
     s32 refs_;
     s32 client_session_inst_id_;
-    s64 state_change_ts_;
-
+    
     u64 probe_seq_id_;
     s64 probe_last_ping_;
     s64 probe_avg_ping_;
-    u32 probe_snd_cnt_;
-    u32 probe_rcv_cnt_;
+
     u64 probe_shake_id_;
     u64 user_data_;
+
+
+    s32 max_recv_loop_count_;
+
+
+
 };
 
 

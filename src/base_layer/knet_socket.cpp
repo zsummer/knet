@@ -88,6 +88,8 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 #endif // WIN32
 
 
+
+
     KNetEnv::count(KNT_STT_SKT_INIT_COUNT)++;
     local_.reset_from_socket(skt_);
     //LogInfo() << "bind local:" << local_.debug_string();
@@ -101,6 +103,9 @@ s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
 {
     KNetEnv::count(KNT_STT_SKT_SND_COUNT)++;
     KNetEnv::count(KNT_STT_SKT_SND_BYTES) += len;
+    probe_snd_cnt_++;
+    probe_snd_bytes_ += len;
+    last_send_ts_ = KNetEnv::now_ms();
     s32 ret = sendto(skt_, pkg_data, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
     if (ret == SOCKET_ERROR)
     {
@@ -137,11 +142,13 @@ s32 KNetSocket::recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms
         //LogError() << "error:" << KNetEnv::error_code();
         return -1;
     }
-
+    
     len = ret;
     KNetEnv::count(KNT_STT_SKT_RCV_COUNT)++;
     KNetEnv::count(KNT_STT_SKT_RCV_BYTES) += ret;
-    state_change_ts_ = now_ms;
+    probe_rcv_cnt_++;
+    probe_rcv_bytes_ += ret;
+    last_recv_ts_ = now_ms;
     return 0;
 }
 
@@ -170,9 +177,33 @@ s32 KNetSocket::destroy()
 
 
 
+s32 KNetSocket::set_skt_recv_buffer(s32 size)
+{
+#ifdef _WIN32
+    s32 ret = setsockopt(skt_, SOL_SOCKET, SO_RCVBUF, (const char*)&size, sizeof(size));
+#else
+    s32 ret = setsockopt(skt_, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+#endif
+    if (ret != 0)
+    {
+        return -1;
+    }
+    return 0;
+}
 
-
-
+s32 KNetSocket::set_skt_send_buffer(s32 size)
+{
+#ifdef _WIN32
+    s32 ret = setsockopt(skt_, SOL_SOCKET, SO_SNDBUF, (const char*)&size, sizeof(size));
+#else
+    s32 ret = setsockopt(skt_, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
+#endif
+    if (ret != 0)
+    {
+        return -1;
+    }
+    return 0;
+}
 
 
 

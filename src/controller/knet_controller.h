@@ -66,6 +66,15 @@ public:
 public:
 	s32 do_tick();
 	s32 stop();
+public:
+	void send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms);
+	void on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
+
+public:
+	s32 get_session_count_by_state(u16 state);
+	s32 get_socket_count_by_state(u16 state);
+
+
 private:
 	s32 close_session(s32 inst_id, bool passive, s32 code);
 	s32 remove_session(s32 inst_id);
@@ -74,10 +83,7 @@ private:
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
 	
 
-public:
-	void send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms);
 
-	void on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms);
 
 private:
 	static int kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id);

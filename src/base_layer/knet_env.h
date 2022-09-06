@@ -64,15 +64,16 @@ enum KNET_STATUS
 };
 
 
+const static u32 KNET_DEVICE_NAME_LEN = 64;
 struct KNetDeviceInfo
 {
-	static const u32 PKT_SIZE = 128 * 6;
-	char device_name[128];
-	char device_type[128];
-	char device_mac[128];
-	char sys_name[128];
-	char sys_version[128];
-	char os_name[128];
+	static const u32 PKT_SIZE = KNET_DEVICE_NAME_LEN * 6;
+	char device_name[KNET_DEVICE_NAME_LEN];
+	char device_type[KNET_DEVICE_NAME_LEN];
+	char device_mac[KNET_DEVICE_NAME_LEN];
+	char sys_name[KNET_DEVICE_NAME_LEN];
+	char sys_version[KNET_DEVICE_NAME_LEN];
+	char os_name[KNET_DEVICE_NAME_LEN];
 	bool check_str(char* src, s32 src_len)
 	{
 		for (s32 i = 0; i < src_len; i++)
@@ -87,12 +88,12 @@ struct KNetDeviceInfo
 
 	bool is_valid()
 	{
-		return check_str(device_name, 128)
-			&& check_str(device_type, 128)
-			&& check_str(device_mac, 128)
-			&& check_str(sys_name, 128)
-			&& check_str(sys_version, 128)
-			&& check_str(os_name, 128);
+		return check_str(device_name, KNET_DEVICE_NAME_LEN)
+			&& check_str(device_type, KNET_DEVICE_NAME_LEN)
+			&& check_str(device_mac, KNET_DEVICE_NAME_LEN)
+			&& check_str(sys_name, KNET_DEVICE_NAME_LEN)
+			&& check_str(sys_version, KNET_DEVICE_NAME_LEN)
+			&& check_str(os_name, KNET_DEVICE_NAME_LEN);
 	}
 };
 static_assert(sizeof(KNetDeviceInfo) == KNetDeviceInfo::PKT_SIZE, "");

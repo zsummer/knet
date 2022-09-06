@@ -63,13 +63,6 @@ s32 KNetSession::reset()
 }
 
 
-#define KCP_UPDATE_INTERVAL 10
-#define KCP_DEFAULT_SND_WND (512)
-#define KCP_DEFAULT_RECV_WND (512)
-#define KCP_MAX_SND_WND (5120)
-#define KCP_MAX_RECV_WND (5120)
-#define KCP_FAST_MIN_RTO (50)
-#define KCP_SVR_DEFAULT_RECV_BUFF_SIZE (2048*1024)
 
 s32 KNetSession::init(KNetController& c, u16 flag)
 {

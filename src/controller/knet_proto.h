@@ -32,6 +32,16 @@
 #endif // KNET_MAX_SESSIONS
 static_assert(KNET_MAX_SESSIONS >= 10, "");
 
+#define KNET_SERVER_RECV_BUFF_SIZE (2048*1024)
+#define KNET_SERVER_SEND_BUFF_SIZE (2048*1024)
+
+#define KCP_UPDATE_INTERVAL 10
+#define KCP_DEFAULT_SND_WND (512)
+#define KCP_DEFAULT_RECV_WND (512)
+#define KCP_MAX_SND_WND (5120)
+#define KCP_MAX_RECV_WND (5120)
+#define KCP_FAST_MIN_RTO (50)
+
 
 //============================================================================
 
@@ -266,25 +276,25 @@ static inline u64 knet_encode_pkt_mac(const char* data, s32 len,  KNetHeader& hd
 
 static inline char* KNetEncodeKNetDeviceInfo(char* p, const KNetDeviceInfo& dvi)
 {
-	p = ikcp_encode_str(p, dvi.device_name, 128);
-	p = ikcp_encode_str(p, dvi.device_type, 128);
-	p = ikcp_encode_str(p, dvi.device_mac, 128);
-	p = ikcp_encode_str(p, dvi.sys_name, 128);
-	p = ikcp_encode_str(p, dvi.sys_version, 128);
-	p = ikcp_encode_str(p, dvi.os_name, 128);
-	static_assert(128 * 6 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
+	p = ikcp_encode_str(p, dvi.device_name, KNET_DEVICE_NAME_LEN);
+	p = ikcp_encode_str(p, dvi.device_type, KNET_DEVICE_NAME_LEN);
+	p = ikcp_encode_str(p, dvi.device_mac, KNET_DEVICE_NAME_LEN);
+	p = ikcp_encode_str(p, dvi.sys_name, KNET_DEVICE_NAME_LEN);
+	p = ikcp_encode_str(p, dvi.sys_version, KNET_DEVICE_NAME_LEN);
+	p = ikcp_encode_str(p, dvi.os_name, KNET_DEVICE_NAME_LEN);
+	static_assert(KNET_DEVICE_NAME_LEN * 6 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
 	return p;
 }
 
 static inline const char* KNetDecodeKNetDeviceInfo(const char* p, KNetDeviceInfo& dvi)
 {
-	p = ikcp_decode_str(p, dvi.device_name, 128);
-	p = ikcp_decode_str(p, dvi.device_type, 128);
-	p = ikcp_decode_str(p, dvi.device_mac, 128);
-	p = ikcp_decode_str(p, dvi.sys_name, 128);
-	p = ikcp_decode_str(p, dvi.sys_version, 128);
-	p = ikcp_decode_str(p, dvi.os_name, 128);
-	static_assert(128 * 6 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
+	p = ikcp_decode_str(p, dvi.device_name, KNET_DEVICE_NAME_LEN);
+	p = ikcp_decode_str(p, dvi.device_type, KNET_DEVICE_NAME_LEN);
+	p = ikcp_decode_str(p, dvi.device_mac, KNET_DEVICE_NAME_LEN);
+	p = ikcp_decode_str(p, dvi.sys_name, KNET_DEVICE_NAME_LEN);
+	p = ikcp_decode_str(p, dvi.sys_version, KNET_DEVICE_NAME_LEN);
+	p = ikcp_decode_str(p, dvi.os_name, KNET_DEVICE_NAME_LEN);
+	static_assert(KNET_DEVICE_NAME_LEN * 6 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
 	return p;
 }
 
@@ -300,7 +310,7 @@ struct KNetProbe
 	u64 shake_id;
 	KNetDeviceInfo dvi;
 };
-static_assert(KNetProbe::PKT_SIZE < KNT_UDAT_SIZE&& KNetProbe::PKT_SIZE> 500, "");
+static_assert(KNetProbe::PKT_SIZE < KNT_UDAT_SIZE&& KNetProbe::PKT_SIZE> 200, "");
 static_assert(sizeof(KNetProbe) == KNetProbe::PKT_SIZE, "");
 
 
@@ -366,7 +376,7 @@ struct KNetCH
 	KNetDeviceInfo dvi;
 	char noise[400];
 };
-static_assert(KNetCH::PKT_SIZE < KNT_UDAT_SIZE&& KNetCH::PKT_SIZE> 1200, "");
+static_assert(KNetCH::PKT_SIZE < KNT_UDAT_SIZE&& KNetCH::PKT_SIZE> 500, "");
 static_assert(sizeof(KNetCH) == KNetCH::PKT_SIZE, "");
 
 static inline char* knet_encode_packet(char* p, const KNetCH& pkt)

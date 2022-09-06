@@ -37,7 +37,7 @@ s32 test_session_connect_mix()
 	KNetAssert(ret == 0, "");
 	KNetAssert(session != NULL, "");
 	s32 connect_tested = 1;
-	KNetOnConnect on_connect = [&](KNetSession& session, bool connected, u16 state, s64 time_out)
+	KNetOnConnect on_connect = [&](KNetController& c, KNetSession& session, bool connected, u16 state, s64 time_out)
 	{
 		connect_tested = 0;
 		if (!connected)
@@ -148,7 +148,7 @@ s32 test_session_connect()
 	KNetAssert(ret == 0, "");
 	KNetAssert(session != NULL, "");
 	s32 connect_tested = 1;
-	KNetOnConnect on_connect = [&](KNetSession& session, bool connected, u16 state, s64 time_out)
+	KNetOnConnect on_connect = [&](KNetController&c, KNetSession& session, bool connected, u16 state, s64 time_out)
 	{
 		connect_tested = 0;
 		if (!connected)
