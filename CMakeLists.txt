@@ -106,7 +106,7 @@ if(WIN32)
     SET_PROPERTY(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 else()
     SET(CMAKE_CXX_FLAGS -std=c++14)
-    SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
+    SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -Og -Wall -g -ggdb")
     SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Ofast -Wall")
     LINK_LIBRARIES(pthread m c)
 endif()
@@ -116,7 +116,7 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 #自定义部分 
-link_libraries(-lssl -lcrypto -ldl )
+link_libraries( -ldl )
 include_directories(${CMAKE_SOURCE_DIR}/tests)
 macro(SUB_DIR_LIST result curdir)
     file(GLOB children RELATIVE ${curdir} ${curdir}/*)
@@ -156,7 +156,7 @@ FOREACH(SUB_DIR ${SUB_DIRS})
             SET_TARGET_PROPERTIES(${SUB_DIR}
                 PROPERTIES 
                 COMPILE_FLAGS "" 
-                LINK_FLAGS "-lssl -lcrypto -ldl " 
+                LINK_FLAGS " -ldl " 
             )
     else()
         if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

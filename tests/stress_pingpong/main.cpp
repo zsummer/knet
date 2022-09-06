@@ -202,7 +202,7 @@ int main()
 	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
 
-	KNetAssert(test_session_connect_mix(400, true, 1, 10, 200) == 0, "");
+	KNetAssert(test_session_connect_mix(400, false, 1, 10, 200) == 0, "");
 
 
 	return 0;

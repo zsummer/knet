@@ -78,7 +78,7 @@ enum KNetCMD
 };
 
 //============================================================================
-const static u32 KNT_MAX_SLOTS = 8;
+const static u32 KNT_MAX_SLOTS = 4;
 
 enum KNetActionCode
 {
