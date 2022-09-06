@@ -26,6 +26,7 @@
 #include <functional>
 
 
+//============================================================================
 
 enum KNTState : u16
 {
@@ -47,7 +48,51 @@ enum KNTFlag : u16
 };
 
 
+enum KNetCMD
+{
+	KNTC_INVALID = 0,
+	KNTC_PB = 1,
+	KNTC_PB_ACK = 2,
+	KNTC_CH = 3,
+	KNTC_SH = 4,
+	KNTC_PSH = 5,
+	KNTC_RST = 6,
+	KNTC_ECHO = 7,
+};
 
+//============================================================================
+const static u32 KNT_MAX_SLOTS = 8;
+
+enum KNetActionCode
+{
+	KNTA_NONE = 0,
+	KNTA_USER_OPERATE,
+	KNTA_TERMINAL_STOP,
+	KNTA_TIMEOUT,
+	KNTA_FLOW_FAILED,
+	KNTA_OTHER,
+};
+
+
+
+enum KNetErrorCode
+{
+	KNTE_OK = 0,
+	KNTE_TIMEOUT,
+	KNTE_INVALID_PARAM,
+	KNTE_INVALID_HDR_PARAM,
+	KNTE_INVALID_HDR_SLOT_OUT,
+};
+
+
+
+
+
+
+
+
+
+//============================================================================
 static inline char* ikcp_encode64u(char* p, IUINT64 l)
 {
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
@@ -118,20 +163,7 @@ static inline const char* ikcp_decode_str(const char* p, char* src, s32 src_len)
 
 
 
-enum KNetCMD
-{
-	KNETCMD_INVALID = 0,
-	KNETCMD_PB = 1,
-	KNETCMD_PB_ACK = 2,
-	KNETCMD_CH = 3,
-	KNETCMD_SH = 4,
-	KNETCMD_PSH = 5,
-	KNETCMD_RST = 6,
-	KNETCMD_ECHO = 7,
-};
-
-const static u32 KNT_MAX_SLOTS = 8;
-
+//============================================================================
 struct KNetHeader
 {
 	static const s32 HDR_SIZE = 8 * 4;
@@ -150,9 +182,19 @@ struct KNetHeader
 static_assert(sizeof(KNetHeader) == KNetHeader::HDR_SIZE, "hdr size is 32");
 static_assert(sizeof(KNetHeader) % 8 == 0, "");
 
+//============================================================================
 static const s32 KNT_UHDR_SIZE = KNetHeader::HDR_SIZE;
 static const s32 KNT_UDAT_SIZE = KNT_UPKT_SIZE - KNT_UHDR_SIZE - (KNT_UPKT_SIZE - KNT_UHDR_SIZE)%16;
+//============================================================================
 
+
+
+
+
+
+
+
+//============================================================================
 static inline char* knet_encode_hdr(char* p, const KNetHeader& hdr)
 {
 	p = ikcp_encode64u(p, hdr.session_id);
@@ -210,21 +252,6 @@ static inline u64 knet_encode_pkt_mac(const char* data, s32 len,  KNetHeader& hd
 	mac *= kPrime;
 	return mac;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -393,17 +420,50 @@ static inline const char* knet_decode_packet(const char* p, KNetSH& pkt)
 }
 
 
+
+struct KNetRST
+{
+	static const s32 PKT_SIZE = 4;
+	s32 rst_code;
+};
+static_assert(sizeof(KNetRST) == KNetRST::PKT_SIZE, "");
+
+static inline char* knet_encode_packet(char* p, const KNetRST& pkt)
+{
+	p = ikcp_encode32u(p, (u32)pkt.rst_code);
+	return p;
+}
+
+static inline const char* knet_decode_packet(const char* p, KNetRST& pkt)
+{
+	p = ikcp_decode32u(p, (u32*)&pkt.rst_code);
+	return p;
+}
+
+//============================================================================
+
+
+
+
+
+
+
 inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetHeader& hdr)
 {
 	return ls << "[session_id:" << hdr.session_id << ", pkt id:" << hdr.pkt_id << ", pkt len:" << hdr.pkt_size << ", chl:" << hdr.chl << ", cmd:" << hdr.cmd << ", slot:" << hdr.slot << "]";
 }
 
 
+
+
+
+
+//============================================================================
 class KNetSession;
 using KNetOnConnect = std::function<void(KNetSession& session, bool connected, u16 state, s64 time_out)>;
 
-using KNetOnAccept = std::function<void(KNetSession& session, s32 code)>;
-using KNetOnDisconnect = std::function<void(KNetSession& session, s32 code)>;
+using KNetOnAccept = std::function<void(KNetSession& session)>;
+using KNetOnDisconnect = std::function<void(KNetSession& session, bool passive)>;
 
 //chl 0 is kcp  
 using KNetOnData = std::function<void(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)>;

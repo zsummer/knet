@@ -59,17 +59,20 @@ public:
 
 	s32 create_connect(const KNetConfigs& configs, KNetSession*& session);
 	s32 start_connect(KNetSession& session, KNetOnConnect on_connected, s64 timeout);
-	s32 restart_connect(KNetSession*& session);
 	s32 close_connect(KNetSession* session);
 	s32 remove_connect(KNetSession* session);
+
+
+	s32 close_session(KNetSession* session);
+
+
 
 public:
 	s32 do_tick();
 	s32 stop();
 private:
-	s32 close_session(s32 inst_id);
+	s32 close_session(s32 inst_id, bool passive, s32 code);
 	s32 remove_session(s32 inst_id);
-	s32 remove_session_with_rst(s32 inst_id);
 	s32 destroy();
 	s32 recv_one_packet(KNetSocket&, s64 now_ms);
 	virtual void on_readable(KNetSocket&, s64 now_ms) override;
@@ -102,9 +105,9 @@ private:
 	void on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 	s32 send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote);
-	s32 send_rst(KNetSession& s);
-	void on_rst(KNetSocket& s, KNetHeader& hdr, KNetAddress& remote, s64 now_ms);
-	void on_rst(KNetSession& s, KNetHeader& hdr, KNetAddress& remote, s64 now_ms);
+	s32 send_rst(KNetSession& s, s32 code);
+	void on_rst(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
+	void on_rst(KNetSession& s, KNetHeader& hdr, s32 code, KNetAddress& remote, s64 now_ms);
 
 	void on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
