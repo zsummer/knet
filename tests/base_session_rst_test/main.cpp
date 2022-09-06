@@ -37,7 +37,7 @@ s32 test_session_connect_mix()
 	KNetAssert(ret == 0, "");
 	KNetAssert(session != NULL, "");
 	s32 connect_tested = 1;
-	KNetOnConnect on_connect = [&](KNetSession& session, bool connected, u16 state, s64 time_out)
+	KNetOnConnect on_connect = [&](KNetController&c, KNetSession& session, bool connected, u16 state, s64 time_out)
 	{
 		connect_tested = 0;
 		if (!connected)
@@ -62,24 +62,47 @@ s32 test_session_connect_mix()
 	KNetAssert(connect_tested == 0, "");
 
 
+	s32 count = 0;
+	KNetOnData on_data = [&](KNetController& c, KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
+	{
+		c.close_and_remove_session(&s);
+		count++;
+	};
 
+	KNetOnDisconnect on_disconnect = [&](KNetController& c, KNetSession& session, bool passive)
+	{
+		if (session.is_server() && passive)
+		{
+			LogError() << "has error";
+			return;
+		}
+		if (!session.is_server() && !passive)
+		{
+			LogError() << "has error";
+			return;
+		}
+		count++;
+	};
+
+
+	controller.set_on_data(on_data);
+	controller.set_on_disconnect(on_disconnect);
 
 	controller.send_data(*session, 0, "12345", 6, KNetEnv::now_ms());
-	for (size_t i = 0; i < 1; i++)
-	{
-		ret = controller.do_tick();
-		KNetAssert(ret == 0, "");
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	}
 
-
-	controller.close_connect(session);
 	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller.do_tick();
 		KNetAssert(ret == 0, "");
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
+	KNetAssert(count == 3, "");
+
+
+	KNetAssert(session->state_ != KNTS_ESTABLISHED, "");
+
+	KNetAssert(controller.remove_connect(session) == 0, "");
+
 
 	if (true)
 	{
@@ -148,7 +171,7 @@ s32 test_session_connect()
 	KNetAssert(ret == 0, "");
 	KNetAssert(session != NULL, "");
 	s32 connect_tested = 1;
-	KNetOnConnect on_connect = [&](KNetSession& session, bool connected, u16 state, s64 time_out)
+	KNetOnConnect on_connect = [&](KNetController&c, KNetSession& session, bool connected, u16 state, s64 time_out)
 	{
 		connect_tested = 0;
 		if (!connected)
@@ -175,20 +198,40 @@ s32 test_session_connect()
 	}
 	KNetAssert(connect_tested == 0, "");
 
+	s32 count = 0;
+	KNetOnData on_data = [&](KNetController& c, KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
+	{
+		c.close_and_remove_session(&s);
+		count++;
+	};
+
+	KNetOnDisconnect on_server_disconnect = [&](KNetController& c, KNetSession& session, bool passive)
+	{
+		if (passive)
+		{
+			LogError() << "has error";
+			return;
+		}
+		count++;
+	};
+
+	KNetOnDisconnect on_client_disconnect = [&](KNetController& c, KNetSession& session, bool passive)
+	{
+		if (!passive)
+		{
+			LogError() << "has error";
+			return;
+		}
+		count++;
+	};
+
+	controller1.set_on_data(on_data);
+	controller1.set_on_disconnect(on_server_disconnect);
+	controller2.set_on_disconnect(on_client_disconnect);
+
+
 
 	controller2.send_data(*session, 0, "12345", 6, KNetEnv::now_ms());
-	for (size_t i = 0; i < 1; i++)
-	{
-		ret = controller1.do_tick();
-		KNetAssert(ret == 0, "");
-		ret = controller2.do_tick();
-		KNetAssert(ret == 0, "");
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	}
-
-
-
-	controller2.close_connect(session);
 	for (size_t i = 0; i < 10; i++)
 	{
 		ret = controller1.do_tick();
@@ -197,6 +240,12 @@ s32 test_session_connect()
 		KNetAssert(ret == 0, "");
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
+	KNetAssert(count == 3, "");
+
+
+	KNetAssert(session->state_ != KNTS_ESTABLISHED, "");
+
+	KNetAssert(controller2.remove_connect(session) == 0, "");
 
 	if (true)
 	{

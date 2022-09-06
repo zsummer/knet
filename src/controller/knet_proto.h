@@ -460,13 +460,14 @@ inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetHeader& hdr
 
 //============================================================================
 class KNetSession;
-using KNetOnConnect = std::function<void(KNetSession& session, bool connected, u16 state, s64 time_out)>;
+class KNetController;
+using KNetOnConnect = std::function<void(KNetController&c, KNetSession& session, bool connected, u16 state, s64 time_out)>;
 
-using KNetOnAccept = std::function<void(KNetSession& session)>;
-using KNetOnDisconnect = std::function<void(KNetSession& session, bool passive)>;
+using KNetOnAccept = std::function<void(KNetController& c, KNetSession& session)>;
+using KNetOnDisconnect = std::function<void(KNetController& c, KNetSession& session, bool passive)>;
 
 //chl 0 is kcp  
-using KNetOnData = std::function<void(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)>;
+using KNetOnData = std::function<void(KNetController& c, KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)>;
 
 
 

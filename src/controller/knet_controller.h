@@ -63,7 +63,7 @@ public:
 	s32 remove_connect(KNetSession* session);
 
 
-	s32 close_session(KNetSession* session);
+	s32 close_and_remove_session(KNetSession* session);
 
 
 

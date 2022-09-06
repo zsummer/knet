@@ -339,7 +339,7 @@ s32 KNetController::remove_connect(KNetSession* session)
 
 
 
-s32 KNetController::close_session(KNetSession* session)
+s32 KNetController::close_and_remove_session(KNetSession* session)
 {
 	if (session == NULL )
 	{
@@ -356,7 +356,17 @@ s32 KNetController::close_session(KNetSession* session)
 		KNetEnv::error_count()++;
 		return -3;
 	}
-	return close_session(session->inst_id_, false, KNTA_USER_OPERATE);
+	s32 ret = close_session(session->inst_id_, false, KNTA_USER_OPERATE);
+	if (ret != 0)
+	{
+		return -4;
+	}
+	ret = remove_session(session->inst_id_);
+	if (ret != 0)
+	{
+		return -5;
+	}
+	return 0;
 }
 
 
@@ -550,7 +560,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 			session.on_connected_ = NULL;
 			u16 state = session.state_;
 			close_session(session.inst_id_, false, KNTA_FLOW_FAILED);
-			on(session, false, state, 0);
+			on(*this, session, false, state, 0);
 			return;
 		}
 	}
@@ -674,7 +684,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	
 	if (on_accept_)
 	{
-		on_accept_(*session);
+		on_accept_(*this, *session);
 	}
 	return;
 }
@@ -735,7 +745,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 		auto on = session.on_connected_;
 		session.on_connected_ = nullptr;
 
-		on(session, true, session.state_, 0);
+		on(*this, session, true, session.state_, 0);
 	}
 	//send_psh(session, "123", 4);
 }
@@ -837,7 +847,7 @@ void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s3
 	}
 	else if (on_data_)
 	{
-		on_data_(s, hdr.chl, pkg, len, now_ms);
+		on_data_(*this, s, hdr.chl, pkg, len, now_ms);
 	}
 }
 
@@ -1089,7 +1099,7 @@ s32 KNetController::close_session(s32 inst_id, bool passive, s32 code)
 
 		if (on_disconnect_)
 		{
-			on_disconnect_(session, passive);
+			on_disconnect_(*this, session, passive);
 		}
 	}
 	else
@@ -1231,7 +1241,7 @@ s32 KNetController::do_tick()
 					auto on = std::move(session.on_connected_);
 					session.on_connected_ = NULL;
 					session.state_ = KNTS_LINGER;
-					on(session, false, session.state_, abs(session.connect_time_ - now_ms));
+					on(*this, session, false, session.state_, abs(session.connect_time_ - now_ms));
 				}
 			}
 		}
@@ -1253,7 +1263,7 @@ void KNetController::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 
 {
 	if (on_data_)
 	{
-		on_data_(s, 0, data, len, now_ms);
+		on_data_(*this, s, 0, data, len, now_ms);
 	}
 }
 
