@@ -280,7 +280,7 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 		s32 ret = ns->init(c.localhost.c_str(), c.localport, c.remote_ip.c_str(), c.remote_port);
 		if (ret != 0)
 		{
-			LogError() <<"start_connect on init error. session:" << session <<", error:" << ret << ":  " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port ;
+			LogError() <<"start_connect on init error. session:" << session <<", error:" << ret <<  ", last error code:" << KNetEnv::error_code() << " :  " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port ;
 			KNetEnv::error_count()++;
 			continue;
 		}
@@ -1026,10 +1026,11 @@ void KNetController::on_rst(KNetSession& s, KNetHeader& hdr, s32 code, KNetAddre
 
 	close_session(s.inst_id_, true, code);
 	//to do callback   
-	if (s.is_server())
+	if (s.is_server() && on_accept_ == NULL && on_disconnect_ == NULL)
 	{
 		remove_session(s.inst_id_);
 	}
+
 	return ;
 }
 
@@ -1342,6 +1343,10 @@ s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
 	if (session.state_ == KNTS_ESTABLISHED && (session.last_send_ts_ - now_ms > 60000 && session.last_recv_ts_ - now_ms > 60000))
 	{
 		close_session(session.inst_id_, false, KNTR_TIMEOUT);
+		if (session.is_server() && on_accept_ == NULL && on_disconnect_ == NULL)
+		{
+			remove_session(session.inst_id_);
+		}
 		return 0;
 	}
 
