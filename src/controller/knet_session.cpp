@@ -76,8 +76,8 @@ s32 KNetSession::init(KNetController& c, u16 flag)
 	kcp_ = ikcp_create(0, (void*)&c, inst_id_);
 	ikcp_nodelay(kcp_, 1, 0, 2, 1);
 	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);
-	ikcp_wndsize(kcp_, KCP_DEFAULT_SND_WND, KCP_DEFAULT_RECV_WND);
-	kcp_->rx_minrto = KCP_FAST_MIN_RTO;
+	ikcp_wndsize(kcp_, KNET_DEFAULT_SND_WND, KNET_DEFAULT_RCV_WND);
+	kcp_->rx_minrto = KNET_FAST_MIN_RTO;
 	kcp_->output = KNetController::kcp_output;
 	kcp_->writelog = KNetController::kcp_writelog;
 	kcp_->stream = 1;
