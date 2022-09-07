@@ -63,8 +63,6 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 			LogError() << "connect error: last state:" << state << ", time_out:" << time_out;
 			return;
 		}
-
-
 	};
 
 
@@ -218,15 +216,12 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	LogInfo() << "";
 	LogInfo() << "==========================================================";
 	LogInfo() << "session_count:" << session_count << ", double_stream:" << double_stream << ", interval:" << interval;
-
-	KNetEnv::serialize();
-	
-
 	for (s32 i = 0; i < 10; i++)
 	{
 		LogInfo() << "turbo[" << i << "] established session:" << turbos[i]->get_session_count_by_state(KNTS_ESTABLISHED);
 		LogInfo() << "turbo[" << i << "] established socket:" << turbos[i]->get_socket_count_by_state(KNTS_ESTABLISHED);
 	}
+	LogInfo() << "packet per secod:" << (KNetEnv::mem_count(KNTP_SKT_SEND_) + KNetEnv::mem_count(KNTP_SKT_SEND_)) / (1.0*keep/1000.0);
 	KNetEnv::serialize();
 
 	for (s32 i = 0; i < 10; i++)
@@ -261,12 +256,16 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
 	FNLog::FastStartDebugLogger();
 	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
-
+	s32 sessions = 200;
+	if (argc > 1)
+	{
+		sessions = atoi(argv[1]);
+	}
 	KNetAssert(test_session_connect_mix(200, true, 1, 5, 20000, 200) == 0, "");
 
 
