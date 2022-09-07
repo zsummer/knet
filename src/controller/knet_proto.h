@@ -35,12 +35,12 @@ static_assert(KNET_MAX_SESSIONS >= 10, "");
 #define KNET_SERVER_RECV_BUFF_SIZE (2048*1024)
 #define KNET_SERVER_SEND_BUFF_SIZE (2048*1024)
 
-#define KCP_UPDATE_INTERVAL 10
-#define KCP_DEFAULT_SND_WND (512)
-#define KCP_DEFAULT_RECV_WND (512)
-#define KCP_MAX_SND_WND (5120)
-#define KCP_MAX_RECV_WND (5120)
-#define KCP_FAST_MIN_RTO (50)
+#define KNET_UPDATE_INTERVAL 10
+#define KNET_DEFAULT_SND_WND (512)
+#define KNET_DEFAULT_RCV_WND (512)
+#define KNET_MAX_SND_WND (5120)
+#define KNET_MAX_RCV_WND (5120)
+#define KNET_FAST_MIN_RTO (50)
 
 
 //============================================================================

@@ -158,10 +158,10 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		{
 			if (s.state_ == KNTS_ESTABLISHED)
 			{
-				static char buf[KNT_KCP_DATA_SIZE] = { 0 };
+				static char buf[10000] = { 0 };
 				if (buf[0] == 0)
 				{
-					for (s32 i = 0; i < KNT_KCP_DATA_SIZE; i++)
+					for (s32 i = 0; i < 10000; i++)
 					{
 						buf[i] = 'a';
 					}
@@ -266,7 +266,8 @@ int main(int argc, char* argv[])
 	{
 		sessions = atoi(argv[1]);
 	}
-	KNetAssert(test_session_connect_mix(200, true, 1, 5, 20000, 200) == 0, "");
+	KNetAssert(test_session_connect_mix(sessions, true, 1, 5, 20000, 200) == 0, "");
+	KNetAssert(test_session_connect_mix(sessions, true, 1, 5, 20000, 8000) == 0, "");
 
 
 	return 0;
