@@ -148,7 +148,7 @@ s32 KNetController::destroy()
 
 	for (auto& s : nss_)
 	{
-		skt_destroy(s);
+		skt_free(s);
 	}
 	nss_.clear();
 	return 0;
@@ -160,7 +160,7 @@ s32 KNetController::start_server(const KNetConfigs& configs)
 	bool has_error = false;
 	for (auto& c : configs)
 	{
-		KNetSocket* ns = skt_create();
+		KNetSocket* ns = skt_alloc();
 		if (ns == NULL)
 		{
 			KNetEnv::error_count()++;
@@ -226,7 +226,7 @@ s32 KNetController::create_connect(const KNetConfigs& configs, KNetSession* &ses
 		return -2;
 	}
 
-	session = create_session();
+	session = ses_alloc();
 	if (session == NULL)
 	{
 		KNetEnv::error_count()++;
@@ -269,7 +269,7 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 	{
 		auto& c = session.configs_[i];
 
-		KNetSocket* ns = skt_create();
+		KNetSocket* ns = skt_alloc();
 		if (ns == NULL)
 		{
 			KNetEnv::error_count()++;
@@ -683,7 +683,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 
 
 
-	KNetSession* session = create_session();
+	KNetSession* session = ses_alloc();
 	session->init(*this);
 	session->state_ = KNTS_ESTABLISHED;
 	session->flag_ = KNTF_SERVER;
@@ -873,6 +873,7 @@ void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s3
 	}
 	else if (on_data_)
 	{
+		KNetEnv::call_mem(KNTP_SES_RECV_, len);
 		on_data_(*this, s, hdr.chl, pkg, len, now_ms);
 	}
 }
@@ -1096,7 +1097,7 @@ s32 KNetController::close_session(s32 inst_id, bool passive, s32 code)
 		
 		if (s.refs_ == 0)
 		{
-			skt_destroy(s);
+			skt_free(s);
 		}
 		slot.inst_id_ = -1;
 	}
@@ -1162,19 +1163,19 @@ s32 KNetController::remove_session(s32 inst_id)
 			return -3;
 		}
 	}
-	return destroy_session(&session);
+	return ses_free(&session);
 }
 
 
 
-KNetSession* KNetController::create_session()
+KNetSession* KNetController::ses_alloc()
 {
 	for (u32 i = 0; i < sessions_.size(); i++)
 	{
 		KNetSession& s = sessions_[i];
 		if (s.state_ == KNTS_INVALID)
 		{
-			KNetEnv::call_user(KNTP_SES_CREATE_COUNT);
+			KNetEnv::call_user(KNTP_SES_ALLOC);
 			return &s;
 		}
 	}
@@ -1184,12 +1185,11 @@ KNetSession* KNetController::create_session()
 		return NULL;
 	}
 	sessions_.emplace_back(sessions_.size());
-	KNetEnv::call_user(KNTP_SES_ALLOC_COUNT);
-	KNetEnv::call_user(KNTP_SES_CREATE_COUNT);
+	KNetEnv::call_user(KNTP_SES_ALLOC);
 	return &sessions_.back();
 }
 
-s32 KNetController::destroy_session(KNetSession* session)
+s32 KNetController::ses_free(KNetSession* session)
 {
 	if (session == NULL)
 	{
@@ -1200,7 +1200,7 @@ s32 KNetController::destroy_session(KNetSession* session)
 		return 0;
 	}
 	
-	KNetEnv::call_user(KNTP_SES_DESTROY_COUNT);
+	KNetEnv::call_user(KNTP_SES_FREE);
 	return session->destory();
 }
 
@@ -1216,7 +1216,7 @@ s32 KNetController::do_tick()
 	{
 		if (s.state_ != KNTS_INVALID && s.refs_ == 0)
 		{
-			s32 ret = skt_destroy(s);
+			s32 ret = skt_free(s);
 			if (ret != 0)
 			{
 				LogError() << "errro";
@@ -1250,6 +1250,13 @@ s32 KNetController::do_tick()
 		if (session.state_ == KNTS_ESTABLISHED)
 		{
 			ikcp_update(session.kcp_, tick_cnt_ * 10);
+			/*	
+			s32 len = ikcp_recv(session.kcp_, kcp_rcv_, KCP_RECV_BUFF_LEN);
+			if (len > 0)
+			{
+				on_kcp_data(session, kcp_rcv_, len, KNetEnv::now_ms());
+			}
+			*/
 			s32 len = ikcp_recv(session.kcp_, pkg_rcv_, KNT_UPKT_SIZE);
 			if (len > 0)
 			{
@@ -1307,6 +1314,7 @@ s32 KNetController::do_tick()
 
 void KNetController::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms)
 {
+	KNetEnv::call_mem(KNTP_SES_RECV_, len);
 	if (on_data_)
 	{
 		on_data_(*this, s, 0, data, len, now_ms);
@@ -1315,6 +1323,7 @@ void KNetController::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 
 
 void KNetController::send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
 {
+	KNetEnv::call_mem(KNTP_SES_SEND_, len);
 	if (chl == 0)
 	{
 		ikcp_send(s.kcp_, data, len);
@@ -1340,14 +1349,14 @@ void KNetController::skt_reset(KNetSocket&s)
 }
 
 
-KNetSocket* KNetController::skt_create()
+KNetSocket* KNetController::skt_alloc()
 {
 	for (u32 i = 0; i < nss_.size(); i++)
 	{
 		KNetSocket& s = nss_[i];
 		if (s.state_ == KNTS_INVALID || s.state_ == KNTS_RST || s.state_ == KNTS_LINGER)
 		{
-			KNetEnv::call_user(KNTP_SKT_ALLOC_COUNT);
+			KNetEnv::call_user(KNTP_SKT_ALLOC);
 			skt_reset(s);
 			return &s;
 		}
@@ -1358,11 +1367,11 @@ KNetSocket* KNetController::skt_create()
 		return NULL;
 	}
 	nss_.emplace_back(nss_.size());
-	KNetEnv::call_user(KNTP_SKT_ALLOC_COUNT);
+	KNetEnv::call_user(KNTP_SKT_ALLOC);
 	return &nss_.back();
 }
 
-s32  KNetController::skt_destroy(KNetSocket& s)
+s32  KNetController::skt_free(KNetSocket& s)
 {
 	if (s.state_ == KNTS_INVALID)
 	{
@@ -1390,7 +1399,7 @@ s32  KNetController::skt_destroy(KNetSocket& s)
 	s.state_ = KNTS_INVALID;
 	s.flag_ = KNTF_NONE;
 	s.refs_ = 0;
-	KNetEnv::call_user(KNTP_SKT_FREE_COUNT);
+	KNetEnv::call_user(KNTP_SKT_FREE);
 	return s.destroy();
 }
 

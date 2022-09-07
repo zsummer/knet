@@ -17,6 +17,13 @@ if (!(x))  \
 
 s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_times, s32 interval,  s32 data_len)
 {
+
+	LogInfo() << "";
+	LogInfo() << "============================================================================================";
+	LogInfo() << "         stress: session:" << session_count << "  double_stream:" << double_stream << " send_times:" << send_times << "  interval:" << interval << "ms  one data:" << data_len;
+	LogInfo() << "============================================================================================";
+
+
 	if (data_len > KNT_KCP_DATA_SIZE)
 	{
 		data_len = KNT_KCP_DATA_SIZE;
@@ -156,8 +163,8 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");
-	KNetAssert(KNetEnv::user_count(KNTP_SKT_ALLOC_COUNT) == KNetEnv::user_count(KNTP_SKT_FREE_COUNT), "");
-	KNetAssert(KNetEnv::user_count(KNTP_SES_CREATE_COUNT) == KNetEnv::user_count(KNTP_SES_DESTROY_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SKT_ALLOC) == KNetEnv::user_count(KNTP_SKT_FREE), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SES_ALLOC) == KNetEnv::user_count(KNTP_SES_FREE), "");
 	return 0;
 }
 

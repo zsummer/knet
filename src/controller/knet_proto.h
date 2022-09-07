@@ -42,7 +42,7 @@ static_assert(KNET_MAX_SESSIONS >= 10, "");
 #define KNET_MAX_RCV_WND (5120)
 #define KNET_FAST_MIN_RTO (50)
 
-
+const static u32 KCP_RECV_BUFF_LEN = 20 * 1024;
 //============================================================================
 
 enum KNTState : u16

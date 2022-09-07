@@ -22,14 +22,12 @@
 KNetSocket::KNetSocket(s32 inst_id)
 {
     memset(this, 0, sizeof(*this));
-    KNetEnv::call_user(KNTP_SKT_INSTRUCT_COUNT);
     inst_id_ = inst_id;
     skt_ = INVALID_SOCKET;
 }
 
 KNetSocket::~KNetSocket()
 {
-    KNetEnv::call_user(KNTP_SKT_DESTRUCT_COUNT);
     if (skt_ != INVALID_SOCKET)
     {
         KNetEnv::error_count()++;
@@ -90,7 +88,7 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 
 
 
-    KNetEnv::call_user(KNTP_SKT_INIT_COUNT);
+    KNetEnv::call_user(KNTP_SKT_INIT);
     local_.reset_from_socket(skt_);
     //LogInfo() << "bind local:" << local_.debug_string();
     //LogInfo() << *this;
@@ -164,7 +162,7 @@ s32 KNetSocket::destroy()
         skt_ = INVALID_SOCKET;
     }
 
-    KNetEnv::call_user(KNTP_SKT_DESTROY_COUNT);
+    KNetEnv::call_user(KNTP_SKT_DESTROY);
     return 0;
 }
 

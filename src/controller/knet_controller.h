@@ -133,11 +133,11 @@ private:
 private:
 	void skt_reset(KNetSocket&);
 
-	KNetSocket* skt_create();
-	s32  skt_destroy(KNetSocket& s);
+	KNetSocket* skt_alloc();
+	s32  skt_free(KNetSocket& s);
 	
-	KNetSession* create_session();
-	s32 destroy_session(KNetSession* session);
+	KNetSession* ses_alloc();
+	s32 ses_free(KNetSession* session);
 
 
 public:
@@ -156,6 +156,11 @@ private:
 	s32 pkg_rcv_offset_;
 	char pkg_snd_[KNT_UPKT_SIZE];
 	s32 pkg_snd_offset_;
+
+	//char kcp_rcv_[KCP_RECV_BUFF_LEN];
+	//s32 kcp_rcv_offset_;
+
+
 	//KNetSessions sessions_;
 	std::unordered_map<u64, KNetSession*> handshakes_s_;
 	std::unordered_map<u64, KNetSession*> establisheds_s_;

@@ -97,6 +97,7 @@ public:
 	static s64 user_count(u32 idx);
 	static void call_mem(u32 idx, s32 bytes);
 	static s64 mem_count(u32 idx);
+	static s64 mem_bytes(u32 idx);
 	static void clean_prof();
 	static void serialize();
 

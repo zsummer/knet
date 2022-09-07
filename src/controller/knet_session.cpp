@@ -74,7 +74,7 @@ s32 KNetSession::init(KNetController& c, u16 flag)
 	flag_ = flag;
 	active_time_ = KNetEnv::now_ms();
 	kcp_ = ikcp_create(0, (void*)&c, inst_id_);
-	ikcp_nodelay(kcp_, 1, 0, 2, 1);
+	ikcp_nodelay(kcp_, 1, KNET_UPDATE_INTERVAL, 1, 1);
 	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);
 	ikcp_wndsize(kcp_, KNET_DEFAULT_SND_WND, KNET_DEFAULT_RCV_WND);
 	kcp_->rx_minrto = KNET_FAST_MIN_RTO;
@@ -82,6 +82,7 @@ s32 KNetSession::init(KNetController& c, u16 flag)
 	kcp_->writelog = KNetController::kcp_writelog;
 	kcp_->stream = 1;
 	//kcp_->logmask = (IKCP_LOG_OUT_WINS << 1) - 1;
+	KNetEnv::call_user(KNTP_SES_INIT);
 	return 0;
 }
 
@@ -94,6 +95,7 @@ s32 KNetSession::destory()
 		delete kcp_;
 		kcp_ = NULL;
 	}
+	KNetEnv::call_user(KNTP_SES_DESTROY);
 	return reset();
 }
 
