@@ -40,6 +40,7 @@ s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 	s32 ret = s.recv_packet(pkg_rcv_, len, remote, now_ms);
 	if (ret != 0)
 	{
+		LogWarn() << "recv_packet error. skt:" << s;
 		return -1;
 	}
 	if (len == 0)
@@ -49,7 +50,7 @@ s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 
 	if (len < KNetHeader::HDR_SIZE)
 	{
-		LogError() << "check hdr error. ";
+		LogWarn() << "less than hdr size error. skt:" << s;
 		return -2;
 	}
 	KNetHeader hdr;
@@ -57,7 +58,7 @@ s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 	p = knet_decode_hdr(p, hdr);
 	if (check_hdr(hdr, p, len - KNetHeader::HDR_SIZE) != 0)
 	{
-		LogError() << "check hdr error. ";
+		LogWarn() << "check hdr error.skt:" << s << hdr <<", recv size:" << len;
 		return -3;
 	}
 
@@ -470,11 +471,11 @@ s32  KNetController::send_probe(KNetSocket& s)
 	{
 		if (s.client_session_inst_id_ != -1 && s.client_session_inst_id_ < (s32)sessions_.size())
 		{
-			LogError() << "send probe by slot[" << s.slot_id_ << "]: session" << sessions_[s.client_session_inst_id_] << ", error:" << ret << "  : " << s.local_.debug_string() << " --> " << s.remote_.debug_string();
+			LogError() << "send probe by slot[" << s.slot_id_ << "]: " << s  <<" session:" << sessions_[s.client_session_inst_id_] << ", error:" << ret << "  : " << s.local_.debug_string() << " --> " << s.remote_.debug_string();
 		}
 		else
 		{
-			LogError() << "send probe by slot[" << s.slot_id_ << "]: error:" << ret << "  : " << s.local_.debug_string() << " --> " << s.remote_.debug_string();
+			LogError() << "send probe by slot[" << s.slot_id_ << "]: error:" << ret << "  : " << s << s.local_.debug_string() << " --> " << s.remote_.debug_string();
 		}
 		return -1;
 	}
@@ -486,19 +487,19 @@ void KNetController::on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s
 	KNetEnv::call_mem(KNTP_SKT_ON_PROBE, hdr.pkt_size);
 	if (len < KNetProbe::PKT_SIZE)
 	{
-		LogError() << "ch error";
+		LogWarn() << "on_probe error len. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	if (!skt_is_server(s))
 	{
-		LogError() << "ch error";
+		LogWarn() << "on_probe error flag. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	KNetProbe packet;
 	knet_decode_packet(pkg, packet);
 	if (!packet.dvi.is_valid())
 	{
-		LogError() << "packet decode error";
+		LogWarn() << "on_probe error decode. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	send_probe_ack(s, packet, remote);
@@ -529,7 +530,7 @@ s32 KNetController::send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAd
 	s32 ret = send_packet(s, snd_head(), snd_len(), remote, probe.client_ms);
 	if (ret != 0)
 	{
-		LogError() << "send_probe_ack " << s.local().debug_string() << " --> " << remote.debug_string() << " has error";
+		LogWarn() << "send_probe_ack error ret. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return -1;
 	}
 	return 0;
@@ -540,12 +541,12 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 	KNetEnv::call_mem(KNTP_SKT_ON_PROBE_ACK, hdr.pkt_size);
 	if (len < KNetProbeAck::PKT_SIZE)
 	{
-		LogError() << "on_probe_ack error";
+		LogWarn() << "on_probe_ack error len. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	if (skt_is_server(s))
 	{
-		LogError() << "on_probe_ack error";
+		LogWarn() << "on_probe_ack error flag. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	KNetProbeAck packet;
@@ -555,7 +556,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 	s64 delay = now - packet.client_ms;
 	if (packet.client_seq_id < s.probe_seq_id_)
 	{
-		LogWarn() << "expire probe ack. may be  recv old ack when reconnecting.";
+		LogWarn() << "on_probe_ack error expire probe ack. may be  recv old ack when reconnecting. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 
@@ -569,53 +570,64 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 		s.probe_avg_ping_ = s.probe_last_ping_;
 	}
 
-	if (s.state_ == KNTS_PROBE)
+	if (s.state_ != KNTS_PROBE)
 	{
-		s.probe_shake_id_ = packet.shake_id;
-		if (s.client_session_inst_id_ == -1 || skt_is_server(s) || s.client_session_inst_id_ >= (s32)sessions_.size())
+		LogDebug() << "on_probe_ack warn skt state. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
+		return;
+	}
+
+
+	s.probe_shake_id_ = packet.shake_id;
+	if (s.client_session_inst_id_ == -1 || skt_is_server(s) || s.client_session_inst_id_ >= (s32)sessions_.size())
+	{
+		LogError() << "error";
+		return;
+	}
+	KNetSession& session = sessions_[s.client_session_inst_id_];
+	if (session.state_ != KNTS_PROBE)
+	{
+		LogWarn() << "on_probe_ack error session state. s:" << s << ", hdr:" << hdr  <<", session:" << session << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
+		return;
+	}
+	session.last_recv_ts_ = now_ms;
+	session.state_ = KNTS_CH;
+	session.shake_id_ = s.probe_shake_id_;
+	s32 snd_ch_cnt = 0;
+	for (auto& slot: session.slots_)
+	{
+		if (slot.inst_id_ >= (s32)nss_.size())
 		{
 			LogError() << "error";
-			return;
+			continue;
 		}
-		KNetSession& session = sessions_[s.client_session_inst_id_];
-		if (session.state_ != KNTS_PROBE)
+		if (slot.inst_id_ == -1)
 		{
-			LogError() << "session.state not KNTS_PROBE ";
-			return;
+			continue;
 		}
-		session.last_recv_ts_ = now_ms;
-		session.state_ = KNTS_CH;
-		session.shake_id_ = s.probe_shake_id_;
-		s32 snd_ch_cnt = 0;
-		for (auto& slot: session.slots_)
+		nss_[slot.inst_id_].probe_shake_id_ = s.probe_shake_id_;
+		nss_[slot.inst_id_].state_ = session.state_;
+		s32 ret = send_ch(nss_[slot.inst_id_], session);
+		if (ret == 0)
 		{
-			if (slot.inst_id_ >= (s32)nss_.size())
-			{
-				LogError() << "error";
-				continue;
-			}
-			if (slot.inst_id_ == -1)
-			{
-				continue;
-			}
-			nss_[slot.inst_id_].probe_shake_id_ = s.probe_shake_id_;
-			nss_[slot.inst_id_].state_ = session.state_;
-			s32 ret = send_ch(nss_[slot.inst_id_], session);
-			if (ret == 0)
-			{
-				snd_ch_cnt++;
-			}
-		}
-		if (snd_ch_cnt == 0 && session.on_connected_)
-		{
-			auto on = std::move(session.on_connected_);
-			session.on_connected_ = NULL;
-			u16 state = session.state_;
-			close_session(session.inst_id_, false, KNTR_FLOW_FAILED);
-			on(*this, session, false, state, 0);
-			return;
+			snd_ch_cnt++;
 		}
 	}
+
+	if (snd_ch_cnt == 0)
+	{
+		LogWarn() << "on_probe_ack error send_ch: all slot send failed. s:" << s << ", hdr:" << hdr << ", session:" << session << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
+	}
+
+	if (snd_ch_cnt == 0 && session.on_connected_)
+	{
+		auto on = std::move(session.on_connected_);
+		session.on_connected_ = NULL;
+		u16 state = session.state_;
+		close_session(session.inst_id_, false, KNTR_FLOW_FAILED);
+		on(*this, session, false, state, 0);
+		return;
+	}
+
 	return;
 }
 
@@ -643,7 +655,7 @@ s32 KNetController::send_ch(KNetSocket& s, KNetSession& session)
 	s32 ret = send_packet(s, snd_head(), snd_len(), s.remote(), KNetEnv::now_ms());
 	if (ret != 0)
 	{
-		LogError() << "send_probe " << s.local().debug_string() << " --> " << s.remote().debug_string() << " has error";
+		LogWarn() << "send_ch error ret:" << ret <<".  s:" << s << ", session:" << session << ", hdr : " << hdr << " : " << s.local().debug_string() << " --> " << s.remote().debug_string();
 		return -1;
 	}
 	return 0;
@@ -655,12 +667,12 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	KNetEnv::call_mem(KNTP_SKT_ON_CH, hdr.pkt_size);
 	if (len < KNetCH::PKT_SIZE)
 	{
-		LogError() << "on_ch error";
+		LogWarn() << "on_ch error len. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	if (!skt_is_server(s))
 	{
-		LogError() << "on_ch error";
+		LogWarn() << "on_ch error flag. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 
@@ -668,7 +680,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	knet_decode_packet(pkg, ch);
 	if (!ch.dvi.is_valid())
 	{
-		LogError() << "ch decode error";
+		LogWarn() << "on_ch error decode. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 
@@ -692,7 +704,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 				iter->second->slots_[hdr.slot].remote_ = remote;
 				iter->second->slots_[hdr.slot].inst_id_ = s.inst_id();
 				s.refs_++;
-				LogDebug() << "on client new ch(already established) on new slot: session_id:" << iter->second->session_id_ << " " << hdr;
+				LogDebug() << "on client new ch(already established) on new slot: session:" << *iter->second << " " << hdr <<", s:" << s ;
 			}
 			else
 			{
@@ -702,12 +714,12 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 					iter->second->slots_[hdr.slot].remote_ = remote;
 					iter->second->slots_[hdr.slot].inst_id_ = s.inst_id();
 					s.refs_++;
-					LogWarn() << "on client repeat ch(already established) duplicate slot: session_id:" << iter->second->session_id_ << " " << hdr;
+					LogWarn() << "on client repeat ch(already established) duplicate slot: session:" << *iter->second << " " << hdr << ", s:" << s;
 				}
 				else
 				{
 					iter->second->slots_[hdr.slot].remote_ = remote;
-					LogDebug() << "on client repeat ch(already established): session_id:" << iter->second->session_id_ << " " << hdr;
+					LogDebug() << "on client repeat ch(already established): session:" << *iter->second << " " << hdr << ", s:" << s;
 				}
 			}
 			
@@ -736,7 +748,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	session->last_recv_ts_ = now_ms;
 	session->last_send_ts_ = now_ms;
 
-	LogDebug() << "server established sucess: session_id:" << session->session_id_ << hdr;
+	LogDebug() << "server accept new connect: s:" << s << ", session:" << *session <<", hdr:" << hdr;
 
 	KNetSH sh;
 	sh.noise = 0;
@@ -772,12 +784,12 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	KNetEnv::call_mem(KNTP_SKT_ON_SH, hdr.pkt_size);
 	if (len < KNetSH::PKT_SIZE)
 	{
-		LogError() << "on_sh error";
+		LogWarn() << "on_sh error len. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	if (skt_is_server(s))
 	{
-		LogError() << "on_sh error";
+		LogWarn() << "on_sh error flag. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 
@@ -785,12 +797,13 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	knet_decode_packet(pkg, sh);
 	if (s.client_session_inst_id_ < 0 || s.client_session_inst_id_ >= (s32)sessions_.size())
 	{
-		LogError() << "sh error";
+		LogError() << "on_sh error client_session_inst_id_. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	KNetSession& session = sessions_[s.client_session_inst_id_];
 	if (session.state_ != KNTS_CH)
 	{
+		LogDebug() << "on_sh error state. s:" << s << ", hdr:" << hdr <<", session:" << session << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
 	session.state_ = KNTS_ESTABLISHED;
@@ -804,7 +817,8 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 		nss_[slot.inst_id_].state_ = KNTS_ESTABLISHED;
 	}
 	session.last_recv_ts_ = now_ms;
-	LogDebug() << "client established sucess. " << hdr <<",  resend count:" << session.connect_resends_ <<", session:" << session;
+	LogDebug() << "client connected: s:" << s << ", hdr:" << hdr << ", session:" << session << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
+
 	KNetEnv::call_user(KNTP_SES_ON_CONNECTED);
 	if (session.on_connected_)
 	{
@@ -1352,7 +1366,6 @@ s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
 
 		if (session.state_ == KNTS_PROBE)
 		{
-			s32 resend = 0;
 			for (auto& s : session.slots_)
 			{
 				if (s.inst_id_ == -1)
@@ -1361,33 +1374,28 @@ s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
 				}
 				if (abs(nss_[s.inst_id_].last_send_ts_ - now_ms) > 600 && abs(nss_[s.inst_id_].last_recv_ts_ - now_ms) > 600)
 				{
-					resend++;
 					session.connect_resends_++;
+					KNetEnv::call_mem(KNTP_SKT_R_PROBE, 1);
+					LogWarn() << "skt:" << nss_[s.inst_id_] << " resend probe.  session : " << session;
 					send_probe(nss_[s.inst_id_]);
 				}
-			}
-			if (resend > 0)
-			{
-				LogWarn() << "resend probe used [" << resend <<"] slots.   session inst : " << session.inst_id_ ;
 			}
 		}
 
 		if (session.state_ == KNTS_CH && abs(session.last_recv_ts_ - now_ms) > 600 && abs(session.last_send_ts_ - now_ms) > 600)
 		{
-			s32 resend = 0;
+
 			for (auto& s : session.slots_)
 			{
 				if (s.inst_id_ == -1)
 				{
 					continue;
 				}
-				resend++;
 				session.connect_resends_++;
+				KNetEnv::call_mem(KNTP_SKT_R_CH, 1);
+				LogWarn() << "skt:" << nss_[s.inst_id_] << " resend ch.  session : " << session;
 				send_ch(nss_[s.inst_id_], session);
-			}
-			if (resend > 0)
-			{
-				LogWarn() << "resend ch used [" << resend << "] slots.   session inst : " << session.inst_id_ << ", session id:" << session.session_id_;
+				
 			}
 		}
 	}
@@ -1436,6 +1444,7 @@ void KNetController::skt_reset(KNetSocket&s)
 	s32 inst_id = s.inst_id_;
 	memset(&s, 0, sizeof(s));
 	s.inst_id_ = inst_id;
+	s.skt_ = INVALID_SOCKET;
 }
 
 

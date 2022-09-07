@@ -85,7 +85,14 @@ public:
 };
 
 
-
+inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSocket& skt)
+{
+    if (skt.client_session_inst_id_ != -1)
+    {
+        return ls << "[skt inst:" << skt.inst_id() << ", skt:" << skt.skt() << ", state:" << skt.state_ << ", flag:" << skt.flag_ <<", slot:" << skt.slot_id_ << ", session inst id:" << skt.client_session_inst_id_ << "]";
+    }
+    return ls << "[skt inst:" << skt.inst_id() << ", skt:" << skt.skt() << ", state:" << skt.state_ << ", flag:" << skt.flag_ << ", slot:" << skt.slot_id_ << "]";
+}
 
 
 #endif   
