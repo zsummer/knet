@@ -65,6 +65,7 @@ public:
 
 public:
 	s32 do_tick();
+
 	s32 stop();
 public:
 	void send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms);
@@ -76,6 +77,8 @@ public:
 
 
 private:
+	s32 on_timeout(KNetSession& session, s64 now_ms);
+
 	s32 close_session(s32 inst_id, bool passive, s32 code);
 	s32 remove_session(s32 inst_id);
 	s32 destroy();
@@ -148,7 +151,7 @@ public:
 	std::unordered_map<u64, KNetSession*>& establisheds_s() { return establisheds_s_; }
 
 private:
-	u32  tick_cnt_;
+	u64  tick_cnt_;
 	u32 controller_state_;
 	KNetSockets nss_;
 	KNetSessions sessions_;

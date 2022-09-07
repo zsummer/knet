@@ -42,7 +42,6 @@ s32 KNetSession::reset()
 {
 	state_ = KNTS_INVALID;
 	flag_ = 0;
-	active_time_ = 0;
 	kcp_ = 0;
 	session_id_ = 0;
 	shake_id_ = 0;
@@ -59,6 +58,9 @@ s32 KNetSession::reset()
 	connect_time_ = 0;
 	connect_expire_time_ = 0;
 	on_connected_ = NULL;
+	last_send_ts_ = 0;
+	last_recv_ts_ = 0;
+	connect_resends_ = 0;
 	return 0;
 }
 
@@ -70,9 +72,8 @@ s32 KNetSession::init(KNetController& c, u16 flag)
 	{
 		return -1;
 	}
-	state_ = KNTS_INIT;
+	state_ = KNTS_CREATED;
 	flag_ = flag;
-	active_time_ = KNetEnv::now_ms();
 	kcp_ = ikcp_create(0, (void*)&c, inst_id_);
 	ikcp_nodelay(kcp_, 1, KNET_UPDATE_INTERVAL, 1, 1);
 	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);

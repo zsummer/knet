@@ -66,7 +66,6 @@ public:
 	s32 inst_id_;
 	u16 state_;
 	u16 flag_;
-	s64 active_time_;
 	u64 session_id_;
 	u64 shake_id_;
 	u64 snd_pkt_id_;
@@ -82,10 +81,19 @@ public:
 
 	s64 connect_time_;
 	s64 connect_expire_time_;
+	s64 connect_resends_;
 	KNetOnConnect on_connected_;
+public:
+	s64 last_send_ts_;
+	s64 last_recv_ts_;
 };
 
 static const s32 KNT_SESSION_SIZE = sizeof(KNetSession);
+
+inline FNLog::LogStream& operator <<(FNLog::LogStream& ls, const KNetSession& session)
+{
+	return ls << "[session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << ", state:" << session.state_ <<", flag:" << session.flag_;
+}
 
 
 

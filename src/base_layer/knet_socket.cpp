@@ -99,7 +99,7 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 
 s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
 {
-    KNetEnv::call_mem(KNTP_SKT_SEND_, len);
+    KNetEnv::call_mem(KNTP_SKT_SEND, len);
     probe_snd_cnt_++;
     probe_snd_bytes_ += len;
     last_send_ts_ = KNetEnv::now_ms();
@@ -141,7 +141,7 @@ s32 KNetSocket::recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms
     }
     
     len = ret;
-    KNetEnv::call_mem(KNTP_SKT_RECV_, ret);
+    KNetEnv::call_mem(KNTP_SKT_RECV, ret);
     probe_rcv_cnt_++;
     probe_rcv_bytes_ += ret;
     last_recv_ts_ = now_ms;

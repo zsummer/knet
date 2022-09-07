@@ -12,6 +12,7 @@ KNetEnv env_init_;
 if (!(x))  \
 {   \
 	LogError() << desc << "has error.";  \
+	KNetEnv::serialize(); \
 	return -1;\
 }
 
@@ -172,7 +173,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 int main()
 {
 	FNLog::FastStartDebugLogger();
-	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
+	//FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
 	KNetAssert(test_session_connect_mix(1, false, 1, 10, 500) == 0, "");
 	KNetAssert(test_session_connect_mix(400, false, 1, 10, 500) == 0, "");

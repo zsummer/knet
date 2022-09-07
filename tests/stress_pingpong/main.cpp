@@ -221,10 +221,10 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		LogInfo() << "turbo[" << i << "] established session:" << turbos[i]->get_session_count_by_state(KNTS_ESTABLISHED);
 		LogInfo() << "turbo[" << i << "] established socket:" << turbos[i]->get_socket_count_by_state(KNTS_ESTABLISHED);
 	}
-	LogInfo() << "skt packet per secod:" << (KNetEnv::mem_count(KNTP_SKT_SEND_) + KNetEnv::mem_count(KNTP_SKT_RECV_)) / (1.0 * keep / 1000.0);
-	LogInfo() << "skt bytes per secod:" << (KNetEnv::mem_bytes(KNTP_SKT_SEND_) + KNetEnv::mem_bytes(KNTP_SKT_RECV_)) / (1.0 * keep / 1000.0) /1024.0/1024.0 << "m";
-	LogInfo() << "ses packet per secod:" << (KNetEnv::mem_count(KNTP_SES_SEND_) + KNetEnv::mem_count(KNTP_SES_RECV_)) / (1.0 * keep / 1000.0);
-	LogInfo() << "ses bytes per secod:" << (KNetEnv::mem_bytes(KNTP_SES_SEND_) + KNetEnv::mem_bytes(KNTP_SES_RECV_)) / (1.0 * keep / 1000.0) /1024.0/1024.0 <<"m";
+	LogInfo() << "skt packet per secod:" << (KNetEnv::mem_count(KNTP_SKT_SEND) + KNetEnv::mem_count(KNTP_SKT_RECV)) / (1.0 * keep / 1000.0);
+	LogInfo() << "skt bytes per secod:" << (KNetEnv::mem_bytes(KNTP_SKT_SEND) + KNetEnv::mem_bytes(KNTP_SKT_RECV)) / (1.0 * keep / 1000.0) /1024.0/1024.0 << "m";
+	LogInfo() << "ses packet per secod:" << (KNetEnv::mem_count(KNTP_SES_SEND) + KNetEnv::mem_count(KNTP_SES_RECV)) / (1.0 * keep / 1000.0);
+	LogInfo() << "ses bytes per secod:" << (KNetEnv::mem_bytes(KNTP_SES_SEND) + KNetEnv::mem_bytes(KNTP_SES_RECV)) / (1.0 * keep / 1000.0) /1024.0/1024.0 <<"m";
 
 
 	KNetEnv::serialize();

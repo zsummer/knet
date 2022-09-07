@@ -32,8 +32,11 @@
 #endif // KNET_MAX_SESSIONS
 static_assert(KNET_MAX_SESSIONS >= 10, "");
 
-#define KNET_SERVER_RECV_BUFF_SIZE (2048*1024)
+#define KNET_SERVER_RECV_BUFF_SIZE (12048*1024)
 #define KNET_SERVER_SEND_BUFF_SIZE (2048*1024)
+
+#define KNET_CLIENT_RECV_BUFF_SIZE (8*1024)
+#define KNET_CLIENT_SEND_BUFF_SIZE (8*1024)
 
 #define KNET_UPDATE_INTERVAL 10
 #define KNET_DEFAULT_SND_WND (512)
@@ -48,7 +51,7 @@ const static u32 KCP_RECV_BUFF_LEN = 20 * 1024;
 enum KNTState : u16
 {
 	KNTS_INVALID = 0,
-	KNTS_INIT,
+	KNTS_CREATED,
 	KNTS_PROBE,
 	KNTS_CH,
 	KNTS_SH,
@@ -80,14 +83,14 @@ enum KNetCMD
 //============================================================================
 const static u32 KNT_MAX_SLOTS = 4;
 
-enum KNetActionCode
+enum KNetActionReason
 {
-	KNTA_NONE = 0,
-	KNTA_USER_OPERATE,
-	KNTA_TERMINAL_STOP,
-	KNTA_TIMEOUT,
-	KNTA_FLOW_FAILED,
-	KNTA_OTHER,
+	KNTR_NONE = 0,
+	KNTR_USER_OPERATE,
+	KNTR_TERMINAL_STOP,
+	KNTR_TIMEOUT,
+	KNTR_FLOW_FAILED,
+	KNTR_OTHER,
 };
 
 

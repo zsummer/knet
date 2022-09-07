@@ -80,10 +80,7 @@ public:
     u64 probe_shake_id_;
     u64 user_data_;
 
-
     s32 max_recv_loop_count_;
-
-
 
 };
 
