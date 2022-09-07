@@ -12,6 +12,7 @@ KNetEnv env_init_;
 if (!(x))  \
 {   \
 	LogError() << desc << "has error.";  \
+	KNetEnv::serialize(); \
 	return -1;\
 }
 
