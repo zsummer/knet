@@ -259,8 +259,8 @@ int main()
 
 
 	KNetAssert(KNetEnv::error_count() == 0, "");
-	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
-	KNetAssert(KNetEnv::count(KNT_STT_SES_CREATE_COUNT) == KNetEnv::count(KNT_STT_SES_DESTROY_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SKT_ALLOC_COUNT) == KNetEnv::user_count(KNTP_SKT_FREE_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SES_CREATE_COUNT) == KNetEnv::user_count(KNTP_SES_DESTROY_COUNT), "");
 
 
 	LogInfo() << "all success ";

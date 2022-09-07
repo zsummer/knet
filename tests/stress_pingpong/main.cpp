@@ -16,13 +16,17 @@ if (!(x))  \
 }
 
 
-s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_times, s32 interval, s32 data_len)
+s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_times, s32 interval, s32 keep,  s32 data_len)
 {
+	LogInfo() << "";
+	LogInfo() << "============================================================================================";
+	LogInfo() << "         stress: session:" << session_count <<"  double_stream:" << double_stream <<" send_times:" << send_times <<"  interval:" << interval <<"ms keep:" << keep/1000 <<"s  one data:" << data_len;
+	LogInfo() << "============================================================================================";
 	if (send_times == 0)
 	{
 		send_times = 1;
 	}
-	KNetEnv::clean_count();
+	KNetEnv::clean_prof();
 	KNetEnv::error_count() = 0;
 
 	KNetConfigs mc;
@@ -59,15 +63,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 			LogError() << "connect error: last state:" << state << ", time_out:" << time_out;
 			return;
 		}
-		static char buf[KNT_KCP_DATA_SIZE];
-		for (s32 i = 0; i < KNT_KCP_DATA_SIZE; i++)
-		{
-			buf[i] = 'a';
-		}
-		for (s32 i = 0; i < send_times; i++)
-		{
-			c.send_data(session, 0, buf, data_len, KNetEnv::now_ms());
-		}
+
 
 	};
 
@@ -118,54 +114,120 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-		if (i%(session_count/10) == 0)
-		{
-			LogInfo() << "try connect:" << i;
-			for (s32 i = 0; i < 10; i++)
-			{
-				LogInfo() << "turbo[" << i << "] connected session:" << turbos[i]->get_session_count_by_state(KNTS_ESTABLISHED);
-			}
-		}
 	}
 
-
-	s32 loop_count = 10 * 1000 / interval;
+	for (s32 i = 0; i < 10; i++)
+	{
+		LogInfo() << "turbo[" << i << "] connected session:" << turbos[i]->get_session_count_by_state(KNTS_ESTABLISHED);
+	}
 
 	s64 now = KNetEnv::now_ms();
-	for (s32 i = 0; i < loop_count; i++)
+	for (s32 i = 0; ; i++)
 	{
 		for (s32 id = 0; id < 10; id++)
 		{
 			ret = turbos[id]->do_tick();
 			KNetAssert(ret == 0, "");
 		}
-		if (i % (loop_count / 10) == 0)
+		std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+		if (KNetEnv::user_count(KNTP_SES_CONNECT) == KNetEnv::user_count(KNTP_SES_ON_CONNECTED)
+			&& KNetEnv::user_count(KNTP_SES_CONNECT) == KNetEnv::user_count(KNTP_SES_ON_ACCEPT))
 		{
-			LogInfo() << "now loop:" << i << "/" << loop_count;
+			break;
+		}
+		if (KNetEnv::now_ms() - now > 10 * 1000)
+		{
+			KNetEnv::serialize();
+			KNetAssert(false, "connect timeout");
+		}
+		
+	}
+
+
+	if (KNetEnv::user_count(KNTP_SES_CONNECT) != KNetEnv::user_count(KNTP_SES_ON_CONNECTED)
+		|| KNetEnv::user_count(KNTP_SES_CONNECT) != KNetEnv::user_count(KNTP_SES_ON_ACCEPT))
+	{
+		KNetAssert(false, "");
+	}
+
+	LogInfo() << "all connected:";
+	KNetEnv::serialize();
+
+	LogInfo() << "begin first echo per connect";
+	for (s32 id = 0; id < 10; id++)
+	{
+		for (auto& s : turbos[id]->sessions())
+		{
+			if (s.state_ == KNTS_ESTABLISHED)
+			{
+				static char buf[KNT_KCP_DATA_SIZE] = { 0 };
+				if (buf[0] == 0)
+				{
+					for (s32 i = 0; i < KNT_KCP_DATA_SIZE; i++)
+					{
+						buf[i] = 'a';
+					}
+				}
+
+				for (s32 i = 0; i < send_times; i++)
+				{
+					turbos[id]->send_data(s, 0, buf, data_len, KNetEnv::now_ms());
+				}
+			}
+		}
+	}
+
+	LogInfo() << "all connect begin pingpong";
+
+
+	now = KNetEnv::now_ms();
+	for (s32 i = 0; ; i++)
+	{
+		for (s32 id = 0; id < 10; id++)
+		{
+			ret = turbos[id]->do_tick();
+			KNetAssert(ret == 0, "");
+		}
+		if (i % (200) == 0)
+		{
+			LogInfo() << "now loop:" << i ;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+		if (KNetEnv::now_ms() - now > keep )
+		{
+			break;
+		}
+	}
+	s64 finish_now = KNetEnv::now_ms();
+
+	for (s32 id = 0; id < 10; id++)
+	{
+		turbos[id]->set_on_data(NULL);
+	}
+	for (s32 i = 0; i<10; i++)
+	{
+		for (s32 id = 0; id < 10; id++)
+		{
+			ret = turbos[id]->do_tick();
+			KNetAssert(ret == 0, "");
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(interval));
 	}
-	s64 finish_now = KNetEnv::now_ms();
+
+
 	LogInfo() << "";
 	LogInfo() << "==========================================================";
 	LogInfo() << "session_count:" << session_count << ", double_stream:" << double_stream << ", interval:" << interval;
 
-	LogInfo() << "KNT_STT_SKT_SND_COUNT:" << KNetEnv::count(KNT_STT_SKT_SND_COUNT);
-	LogInfo() << "KNT_STT_SKT_RCV_COUNT:" << KNetEnv::count(KNT_STT_SKT_RCV_COUNT);
-	LogInfo() << "KNT_STT_SKT_SND_BYTES:" << KNetEnv::count(KNT_STT_SKT_SND_BYTES);
-	LogInfo() << "KNT_STT_SKT_RCV_BYTES:" << KNetEnv::count(KNT_STT_SKT_RCV_BYTES);
+	KNetEnv::serialize();
+	
 
-
-	LogInfo() << "AVG SECOND KNT_STT_SKT_SND_COUNT:" << KNetEnv::count(KNT_STT_SKT_SND_COUNT) / ((finish_now - now) / 1000);
-	LogInfo() << "AVG SECOND KNT_STT_SKT_RCV_COUNT:" << KNetEnv::count(KNT_STT_SKT_RCV_COUNT) / ((finish_now - now) / 1000);
-	LogInfo() << "AVG SECOND KNT_STT_SKT_SND_BYTES:" << KNetEnv::count(KNT_STT_SKT_SND_BYTES) / ((finish_now - now) / 1000);
-	LogInfo() << "AVG SECOND KNT_STT_SKT_RCV_BYTES:" << KNetEnv::count(KNT_STT_SKT_RCV_BYTES) / ((finish_now - now) / 1000);
 	for (s32 i = 0; i < 10; i++)
 	{
 		LogInfo() << "turbo[" << i << "] established session:" << turbos[i]->get_session_count_by_state(KNTS_ESTABLISHED);
 		LogInfo() << "turbo[" << i << "] established socket:" << turbos[i]->get_socket_count_by_state(KNTS_ESTABLISHED);
 	}
-	KNetEnv::print_count();
+	KNetEnv::serialize();
 
 	for (s32 i = 0; i < 10; i++)
 	{
@@ -188,10 +250,13 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	}
 
 
-	LogInfo() << "finish.";
+	
 	KNetAssert(KNetEnv::error_count() == 0, "");
-	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
-	KNetAssert(KNetEnv::count(KNT_STT_SES_CREATE_COUNT) == KNetEnv::count(KNT_STT_SES_DESTROY_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SKT_ALLOC_COUNT) == KNetEnv::user_count(KNTP_SKT_FREE_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SES_CREATE_COUNT) == KNetEnv::user_count(KNTP_SES_DESTROY_COUNT), "");
+
+	LogInfo() << "finish.";
+	LogInfo() << "";
 	return 0;
 }
 
@@ -202,7 +267,7 @@ int main()
 	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
 
-	KNetAssert(test_session_connect_mix(400, false, 1, 10, 200) == 0, "");
+	KNetAssert(test_session_connect_mix(200, true, 1, 5, 20000, 200) == 0, "");
 
 
 	return 0;

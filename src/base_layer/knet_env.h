@@ -22,53 +22,7 @@
 #include "knet_base.h"
 #include <chrono>
 
-enum KNET_STATUS
-{
-	KNT_STT_NONE,
 
-	KNT_STT_SKT_INSTRUCT_COUNT,
-	KNT_STT_SKT_DESTRUCT_COUNT,
-
-	KNT_STT_SKT_INIT_COUNT,
-	KNT_STT_SKT_DESTROY_COUNT,
-
-	KNT_STT_SKT_ALLOC_COUNT,
-	KNT_STT_SKT_FREE_COUNT,
-
-	KNT_STT_SKT_SND_COUNT,
-	KNT_STT_SKT_RCV_COUNT,
-	KNT_STT_SKT_SND_BYTES,
-	KNT_STT_SKT_RCV_BYTES,
-
-
-
-
-	KNT_STT_SKT_CONNECT_COUNT,
-
-
-	KNT_STT_SKT_HANDSHAKE_CH_SND_COUNT,
-	KNT_STT_SKT_HANDSHAKE_CH_RCV_COUNT,
-	KNT_STT_SKT_HANDSHAKE_SH_SND_COUNT,
-	KNT_STT_SKT_HANDSHAKE_SH_RCV_COUNT,
-	KNT_STT_SKT_ESTABLISHED_COUNT,
-	KNT_STT_SKT_LINGER_COUNT,
-
-	KNT_STT_SES_CREATE_COUNT,
-	KNT_STT_SES_DESTROY_COUNT,
-	KNT_STT_SES_ALLOC_COUNT,
-	KNT_STT_SES_FREE_COUNT,
-
-
-	KNT_STT_SES_ON_ACCEPT,
-	KNT_STT_SES_ON_CONNECTED,
-	KNT_STT_SES_CONNECTED,
-
-
-	KNT_STT_CTL_START_COUNT,
-	KNT_STT_CTL_DESTROY_COUNT,
-
-	KNT_STT_MAX,
-};
 
 
 const static u32 KNET_DEVICE_NAME_LEN = 64;
@@ -117,25 +71,9 @@ public:
 	{
 		clean_env();
 	}
-	static s32 init_env()
-	{
-#ifdef _WIN32
-		WSADATA wsa_data;
-		s32 ret = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-		if (ret != NO_ERROR)
-		{
-			return -1;
-		}
-#endif
-		return 0;
-	}
+	static s32 init_env();
 
-	static void clean_env()
-	{
-#ifdef _WIN32
-		WSACleanup();
-#endif
-	}
+	static void clean_env();
 
 	static s32 error_code()
 	{
@@ -154,9 +92,13 @@ public:
 
 	static s32& error_count();
 
-	static s64& count(KNET_STATUS id);
-	static void clean_count();
-	static void print_count();
+
+	static void call_user(u32 idx);
+	static s64 user_count(u32 idx);
+	static void call_mem(u32 idx, s32 bytes);
+	static s64 mem_count(u32 idx);
+	static void clean_prof();
+	static void serialize();
 
 
 	static u64 create_seq_id();

@@ -25,7 +25,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	{
 		send_times = 1;
 	}
-	KNetEnv::clean_count();
+	KNetEnv::clean_prof();
 	KNetEnv::error_count() = 0;
 
 	KNetConfigs mc;
@@ -132,16 +132,9 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	LogInfo() << "==========================================================";
 	LogInfo() << "session_count:" << session_count << ", double_stream:" << double_stream << ", interval:" << interval;
 
-	LogInfo() << "KNT_STT_SKT_SND_COUNT:" << KNetEnv::count(KNT_STT_SKT_SND_COUNT);
-	LogInfo() << "KNT_STT_SKT_RCV_COUNT:" << KNetEnv::count(KNT_STT_SKT_RCV_COUNT);
-	LogInfo() << "KNT_STT_SKT_SND_BYTES:" << KNetEnv::count(KNT_STT_SKT_SND_BYTES);
-	LogInfo() << "KNT_STT_SKT_RCV_BYTES:" << KNetEnv::count(KNT_STT_SKT_RCV_BYTES);
+	KNetEnv::serialize();
 
 
-	LogInfo() << "AVG SECOND KNT_STT_SKT_SND_COUNT:" << KNetEnv::count(KNT_STT_SKT_SND_COUNT) / ((finish_now - now) / 1000);
-	LogInfo() << "AVG SECOND KNT_STT_SKT_RCV_COUNT:" << KNetEnv::count(KNT_STT_SKT_RCV_COUNT) / ((finish_now - now) / 1000);
-	LogInfo() << "AVG SECOND KNT_STT_SKT_SND_BYTES:" << KNetEnv::count(KNT_STT_SKT_SND_BYTES) / ((finish_now - now) / 1000);
-	LogInfo() << "AVG SECOND KNT_STT_SKT_RCV_BYTES:" << KNetEnv::count(KNT_STT_SKT_RCV_BYTES) / ((finish_now - now) / 1000);
 
 
 
@@ -163,8 +156,8 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");
-	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
-	KNetAssert(KNetEnv::count(KNT_STT_SES_CREATE_COUNT) == KNetEnv::count(KNT_STT_SES_DESTROY_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SKT_ALLOC_COUNT) == KNetEnv::user_count(KNTP_SKT_FREE_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SES_CREATE_COUNT) == KNetEnv::user_count(KNTP_SES_DESTROY_COUNT), "");
 	return 0;
 }
 

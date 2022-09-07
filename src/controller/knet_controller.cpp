@@ -319,7 +319,7 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 		session.active_time_ = KNetEnv::now_ms();
 		session.connect_time_ = session.active_time_;
 		session.connect_expire_time_ = session.active_time_ + timeout;
-		KNetEnv::count(KNT_STT_SES_CONNECTED)++;
+		KNetEnv::call_user(KNTP_SES_CONNECT);
 		return 0;
 	}
 	close_session(session.inst_id_, false, KNTA_FLOW_FAILED);
@@ -707,7 +707,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	memcpy(sh.sg, session->sg_, sizeof(sh.sg));
 	memcpy(sh.sp, session->sp_, sizeof(sh.sp));
 	send_sh(s, ch, sh, remote);
-	KNetEnv::count(KNT_STT_SES_ON_ACCEPT)++;
+	KNetEnv::call_user(KNTP_SES_ON_ACCEPT);
 	if (on_accept_)
 	{
 		on_accept_(*this, *session);
@@ -765,7 +765,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	}
 
 	LogDebug() << "client established sucess. " << hdr;
-	KNetEnv::count(KNT_STT_SES_ON_CONNECTED)++;
+	KNetEnv::call_user(KNTP_SES_ON_CONNECTED);
 	if (session.on_connected_)
 	{
 		auto on = session.on_connected_;
@@ -1174,7 +1174,7 @@ KNetSession* KNetController::create_session()
 		KNetSession& s = sessions_[i];
 		if (s.state_ == KNTS_INVALID)
 		{
-			KNetEnv::count(KNT_STT_SES_CREATE_COUNT)++;
+			KNetEnv::call_user(KNTP_SES_CREATE_COUNT);
 			return &s;
 		}
 	}
@@ -1184,8 +1184,8 @@ KNetSession* KNetController::create_session()
 		return NULL;
 	}
 	sessions_.emplace_back(sessions_.size());
-	KNetEnv::count(KNT_STT_SES_ALLOC_COUNT)++;
-	KNetEnv::count(KNT_STT_SES_CREATE_COUNT)++;
+	KNetEnv::call_user(KNTP_SES_ALLOC_COUNT);
+	KNetEnv::call_user(KNTP_SES_CREATE_COUNT);
 	return &sessions_.back();
 }
 
@@ -1200,7 +1200,7 @@ s32 KNetController::destroy_session(KNetSession* session)
 		return 0;
 	}
 	
-	KNetEnv::count(KNT_STT_SES_DESTROY_COUNT)++;
+	KNetEnv::call_user(KNTP_SES_DESTROY_COUNT);
 	return session->destory();
 }
 
@@ -1347,7 +1347,7 @@ KNetSocket* KNetController::skt_create()
 		KNetSocket& s = nss_[i];
 		if (s.state_ == KNTS_INVALID || s.state_ == KNTS_RST || s.state_ == KNTS_LINGER)
 		{
-			KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT)++;
+			KNetEnv::call_user(KNTP_SKT_ALLOC_COUNT);
 			skt_reset(s);
 			return &s;
 		}
@@ -1358,7 +1358,7 @@ KNetSocket* KNetController::skt_create()
 		return NULL;
 	}
 	nss_.emplace_back(nss_.size());
-	KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT)++;
+	KNetEnv::call_user(KNTP_SKT_ALLOC_COUNT);
 	return &nss_.back();
 }
 
@@ -1390,7 +1390,7 @@ s32  KNetController::skt_destroy(KNetSocket& s)
 	s.state_ = KNTS_INVALID;
 	s.flag_ = KNTF_NONE;
 	s.refs_ = 0;
-	KNetEnv::count(KNT_STT_SKT_FREE_COUNT)++;
+	KNetEnv::call_user(KNTP_SKT_FREE_COUNT);
 	return s.destroy();
 }
 

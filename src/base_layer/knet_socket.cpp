@@ -22,14 +22,14 @@
 KNetSocket::KNetSocket(s32 inst_id)
 {
     memset(this, 0, sizeof(*this));
-    KNetEnv::count(KNT_STT_SKT_INSTRUCT_COUNT)++;
+    KNetEnv::call_user(KNTP_SKT_INSTRUCT_COUNT);
     inst_id_ = inst_id;
     skt_ = INVALID_SOCKET;
 }
 
 KNetSocket::~KNetSocket()
 {
-    KNetEnv::count(KNT_STT_SKT_DESTRUCT_COUNT)++;
+    KNetEnv::call_user(KNTP_SKT_DESTRUCT_COUNT);
     if (skt_ != INVALID_SOCKET)
     {
         KNetEnv::error_count()++;
@@ -90,7 +90,7 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 
 
 
-    KNetEnv::count(KNT_STT_SKT_INIT_COUNT)++;
+    KNetEnv::call_user(KNTP_SKT_INIT_COUNT);
     local_.reset_from_socket(skt_);
     //LogInfo() << "bind local:" << local_.debug_string();
     //LogInfo() << *this;
@@ -101,8 +101,7 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 
 s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
 {
-    KNetEnv::count(KNT_STT_SKT_SND_COUNT)++;
-    KNetEnv::count(KNT_STT_SKT_SND_BYTES) += len;
+    KNetEnv::call_mem(KNTP_SKT_SEND_, len);
     probe_snd_cnt_++;
     probe_snd_bytes_ += len;
     last_send_ts_ = KNetEnv::now_ms();
@@ -144,8 +143,7 @@ s32 KNetSocket::recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms
     }
     
     len = ret;
-    KNetEnv::count(KNT_STT_SKT_RCV_COUNT)++;
-    KNetEnv::count(KNT_STT_SKT_RCV_BYTES) += ret;
+    KNetEnv::call_mem(KNTP_SKT_RECV_, ret);
     probe_rcv_cnt_++;
     probe_rcv_bytes_ += ret;
     last_recv_ts_ = now_ms;
@@ -166,7 +164,7 @@ s32 KNetSocket::destroy()
         skt_ = INVALID_SOCKET;
     }
 
-    KNetEnv::count(KNT_STT_SKT_DESTROY_COUNT)++;
+    KNetEnv::call_user(KNTP_SKT_DESTROY_COUNT);
     return 0;
 }
 

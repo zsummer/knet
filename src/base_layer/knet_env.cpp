@@ -16,8 +16,13 @@
 * limitations under the License.
 */
 
-
+#include "zprof.h"
 #include "knet_env.h"
+
+#define KNetProf ProfRecord<1987, 1, KNTP_MAX>
+#define KNetProfInst KNetProf::instance()
+
+
 
 
 s32& KNetEnv::error_count()
@@ -26,27 +31,37 @@ s32& KNetEnv::error_count()
     return global_errors_;
 }
 
-s64 g_knet_status[KNT_STT_MAX] = { 0 };
 
-s64& KNetEnv::count(KNET_STATUS id)
+void KNetEnv::call_user(u32 idx)
 {
-    return g_knet_status[id];
+    KNetProfInst.call_user(idx + KNetProfInst.node_declare_begin_id(), 1, 1);
+}
+s64 KNetEnv::user_count(u32 idx)
+{
+    return KNetProfInst.node(idx + KNetProfInst.node_declare_begin_id()).user.c;
 }
 
-void KNetEnv::clean_count()
+void KNetEnv::call_mem(u32 idx, s32 bytes)
 {
-    memset(g_knet_status, 0, sizeof(g_knet_status));
+    KNetProfInst.call_mem(idx + KNetProfInst.node_declare_begin_id(), 1, bytes);
+}
+s64 KNetEnv::mem_count(u32 idx)
+{
+    return KNetProfInst.node(idx + KNetProfInst.node_declare_begin_id()).mem.c;
 }
 
-void KNetEnv::print_count()
+
+void KNetEnv::clean_prof()
 {
-    for (s32 i = 0; i < KNT_STT_MAX; i++)
+    KNetProfInst.clean_declare_info(false);
+}
+void KNetEnv::serialize()
+{
+    auto call_log = [](const ProfSerializeBuffer& buffer)
     {
-        if (g_knet_status[i] > 0)
-        {
-            LogInfo() << "knet env count[" << i << "]: " << g_knet_status[i];
-        }
-    }
+        LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_INFO, 0, 0, FNLog::LOG_PREFIX_NULL).write_buffer(buffer.buff(), buffer.buff_len());
+    };
+    KNetProfInst.serialize(PROF_SER_DELCARE, call_log);
 }
 u64 KNetEnv::create_seq_id()
 {
@@ -68,3 +83,62 @@ s32 KNetEnv::fill_device_info(KNetDeviceInfo& dvi)
     return 0;
 }
 
+
+#define KNET_REG_NODE(id)  KNetProfInst.regist_node(id + KNetProfInst.node_declare_begin_id(), #id, PROF_COUNTER_DEFAULT,  false, false)
+
+s32 KNetEnv::init_env()
+{
+#ifdef _WIN32
+    WSADATA wsa_data;
+    s32 ret = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if (ret != NO_ERROR)
+    {
+        return -1;
+    }
+#endif
+    KNetProfInst.init_prof("knet prof");
+    KNET_REG_NODE(KNTP_NONE);
+
+    KNET_REG_NODE(KNTP_SKT_INSTRUCT_COUNT);
+    KNET_REG_NODE(KNTP_SKT_DESTRUCT_COUNT);
+
+    KNET_REG_NODE(KNTP_SKT_INIT_COUNT);
+    KNET_REG_NODE(KNTP_SKT_DESTROY_COUNT);
+
+    KNET_REG_NODE(KNTP_SKT_ALLOC_COUNT);
+    KNET_REG_NODE(KNTP_SKT_FREE_COUNT);
+
+    KNET_REG_NODE(KNTP_SKT_SEND_);
+    KNET_REG_NODE(KNTP_SKT_RECV_);
+
+
+    KNET_REG_NODE(KNTP_SKT_CONNECT_COUNT);
+
+    KNET_REG_NODE(KNTP_SKT_HANDSHAKE_CH_SND_COUNT);
+    KNET_REG_NODE(KNTP_SKT_HANDSHAKE_CH_RCV_COUNT);
+    KNET_REG_NODE(KNTP_SKT_HANDSHAKE_SH_SND_COUNT);
+    KNET_REG_NODE(KNTP_SKT_HANDSHAKE_SH_RCV_COUNT);
+    KNET_REG_NODE(KNTP_SKT_ESTABLISHED_COUNT);
+    KNET_REG_NODE(KNTP_SKT_LINGER_COUNT);
+
+    KNET_REG_NODE(KNTP_SES_CREATE_COUNT);
+    KNET_REG_NODE(KNTP_SES_DESTROY_COUNT);
+    KNET_REG_NODE(KNTP_SES_ALLOC_COUNT);
+    KNET_REG_NODE(KNTP_SES_FREE_COUNT);
+
+    KNET_REG_NODE(KNTP_SES_ON_ACCEPT);
+    KNET_REG_NODE(KNTP_SES_ON_CONNECTED);
+    KNET_REG_NODE(KNTP_SES_CONNECT);
+
+    KNET_REG_NODE(KNTP_CTL_START_COUNT);
+    KNET_REG_NODE(KNTP_CTL_DESTROY_COUNT);
+
+    return 0;
+}
+
+void KNetEnv::clean_env()
+{
+#ifdef _WIN32
+    WSACleanup();
+#endif
+}

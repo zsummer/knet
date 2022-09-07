@@ -15,7 +15,7 @@ if (!(x))  \
 s32 test_session_connect_mix()
 {
 
-	KNetEnv::clean_count();
+	KNetEnv::clean_prof();
 	KNetEnv::error_count() = 0;
 
 
@@ -105,8 +105,8 @@ s32 test_session_connect_mix()
 
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");
-	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
-	KNetAssert(KNetEnv::count(KNT_STT_SES_CREATE_COUNT) == KNetEnv::count(KNT_STT_SES_DESTROY_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SKT_ALLOC_COUNT) == KNetEnv::user_count(KNTP_SKT_FREE_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SES_CREATE_COUNT) == KNetEnv::user_count(KNTP_SES_DESTROY_COUNT), "");
 	return 0;
 }
 
@@ -114,7 +114,7 @@ s32 test_session_connect_mix()
 s32 test_session_connect()
 {
 
-	KNetEnv::clean_count();
+	KNetEnv::clean_prof();
 	KNetEnv::error_count() = 0;
 
 
@@ -239,8 +239,8 @@ s32 test_session_connect()
 
 	LogInfo() << "finish.";
 	KNetAssert(KNetEnv::error_count() == 0, "");
-	KNetAssert(KNetEnv::count(KNT_STT_SKT_ALLOC_COUNT) == KNetEnv::count(KNT_STT_SKT_FREE_COUNT), "");
-	KNetAssert(KNetEnv::count(KNT_STT_SES_CREATE_COUNT) == KNetEnv::count(KNT_STT_SES_DESTROY_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SKT_ALLOC_COUNT) == KNetEnv::user_count(KNTP_SKT_FREE_COUNT), "");
+	KNetAssert(KNetEnv::user_count(KNTP_SES_CREATE_COUNT) == KNetEnv::user_count(KNTP_SES_DESTROY_COUNT), "");
 	return 0;
 
 }
