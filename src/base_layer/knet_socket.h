@@ -33,7 +33,7 @@ class KNetSocket
 {
 public:
     friend class KNetSession;
-    friend class KNetController;
+    friend class KNetTurbo;
     friend class KNetSelect;
     KNetSocket(s32 inst_id);
     ~KNetSocket();

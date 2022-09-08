@@ -22,18 +22,18 @@
 
 
 
-KNetController::KNetController()
+KNetTurbo::KNetTurbo()
 {
-	controller_state_ = 0;
+	turbo_state_ = 0;
 	tick_cnt_ = 0;
 }
 
-KNetController::~KNetController()
+KNetTurbo::~KNetTurbo()
 {
 
 }
 
-s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
+s32 KNetTurbo::recv_one_packet(KNetSocket&s, s64 now_ms)
 {
 	int len = KNT_UPKT_SIZE;
 	KNetAddress remote;
@@ -94,7 +94,7 @@ s32 KNetController::recv_one_packet(KNetSocket&s, s64 now_ms)
 
 
 
-void KNetController::on_readable(KNetSocket& s, s64 now_ms)
+void KNetTurbo::on_readable(KNetSocket& s, s64 now_ms)
 {
 	//LogDebug() << s;
 	s32 loop_count = 1;
@@ -113,7 +113,7 @@ void KNetController::on_readable(KNetSocket& s, s64 now_ms)
 
 
 
-void KNetController::on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	if (pkg[len - 1] != '\0')
 	{
@@ -134,7 +134,7 @@ void KNetController::on_echo(KNetSocket& s, KNetHeader& hdr, const char* pkg, s3
 
 
 
-s32 KNetController::destroy()
+s32 KNetTurbo::destroy()
 {
 	for (auto& session : sessions_)
 	{
@@ -156,7 +156,7 @@ s32 KNetController::destroy()
 }
 
 
-s32 KNetController::start_server(const KNetConfigs& configs)
+s32 KNetTurbo::start_server(const KNetConfigs& configs)
 {
 	bool has_error = false;
 	for (auto& c : configs)
@@ -207,13 +207,13 @@ s32 KNetController::start_server(const KNetConfigs& configs)
 }
 
 
-s32 KNetController::stop()
+s32 KNetTurbo::stop()
 {
 	return destroy();
 }
 
 
-s32 KNetController::create_connect(const KNetConfigs& configs, KNetSession* &session)
+s32 KNetTurbo::create_connect(const KNetConfigs& configs, KNetSession* &session)
 {
 	if (sessions_.full())
 	{
@@ -247,7 +247,7 @@ s32 KNetController::create_connect(const KNetConfigs& configs, KNetSession* &ses
 }
 
 
-s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connected, s64 timeout)
+s32 KNetTurbo::start_connect(KNetSession& session, KNetOnConnect on_connected, s64 timeout)
 {
 	if (session.state_ != KNTS_RST && session.state_ != KNTS_LINGER && session.state_ != KNTS_CREATED)
 	{
@@ -347,7 +347,7 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 
 
 
-s32 KNetController::close_connect(KNetSession* session)
+s32 KNetTurbo::close_connect(KNetSession* session)
 {
 	if (session == NULL )
 	{
@@ -374,7 +374,7 @@ s32 KNetController::close_connect(KNetSession* session)
 	return close_session(session->inst_id_, false, KNTR_USER_OPERATE);
 }
 
-s32 KNetController::remove_connect(KNetSession* session)
+s32 KNetTurbo::remove_connect(KNetSession* session)
 {
 	if (session == NULL)
 	{
@@ -386,7 +386,7 @@ s32 KNetController::remove_connect(KNetSession* session)
 
 
 
-s32 KNetController::close_and_remove_session(KNetSession* session)
+s32 KNetTurbo::close_and_remove_session(KNetSession* session)
 {
 	if (session == NULL )
 	{
@@ -418,25 +418,25 @@ s32 KNetController::close_and_remove_session(KNetSession* session)
 
 
 
-int KNetController::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id)
+int KNetTurbo::kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id)
 {
 	if (user == NULL)
 	{
 		return -1;
 	}
-	KNetController* controller = (KNetController*)user;
+	KNetTurbo* turbo = (KNetTurbo*)user;
 	s32 inst_id = user_id;
 
-	if (inst_id < 0 || inst_id >= (s32)controller->sessions_.size())
+	if (inst_id < 0 || inst_id >= (s32)turbo->sessions_.size())
 	{
 		return -2;
 	}
 
-	s32 ret = controller->send_psh(controller->sessions_[inst_id], 0, buf, len);
+	s32 ret = turbo->send_psh(turbo->sessions_[inst_id], 0, buf, len);
 	return ret;
 }
 
-void KNetController::kcp_writelog(const char* log, struct IKCPCB* kcp, void* user, int user_id)
+void KNetTurbo::kcp_writelog(const char* log, struct IKCPCB* kcp, void* user, int user_id)
 {
 	LogDebug() << "kcp inner log:" << log;
 }
@@ -447,7 +447,7 @@ void KNetController::kcp_writelog(const char* log, struct IKCPCB* kcp, void* use
 
 
 
-s32 KNetController::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+s32 KNetTurbo::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	static const s32 offset = offsetof(KNetHeader, slot);
 	*(pkg + offset) = s.slot_id_;
@@ -455,7 +455,7 @@ s32 KNetController::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& 
 }
 
 
-s32  KNetController::send_probe(KNetSocket& s, u64 resend)
+s32  KNetTurbo::send_probe(KNetSocket& s, u64 resend)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -488,7 +488,7 @@ s32  KNetController::send_probe(KNetSocket& s, u64 resend)
 	return 0;
 }
 
-void KNetController::on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	KNetEnv::call_mem(KNTP_SKT_ON_PROBE, hdr.pkt_size);
 	if (len < KNetProbe::PKT_SIZE)
@@ -518,7 +518,7 @@ void KNetController::on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s
 }
 
 
-s32 KNetController::send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAddress& remote)
+s32 KNetTurbo::send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAddress& remote)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -547,7 +547,7 @@ s32 KNetController::send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAd
 	return 0;
 }
 
-void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	KNetEnv::call_mem(KNTP_SKT_ON_PROBE_ACK, hdr.pkt_size);
 	if (len < KNetProbeAck::PKT_SIZE)
@@ -642,7 +642,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 	return;
 }
 
-s32 KNetController::send_ch(KNetSocket& s, KNetSession& session, u64 resend)
+s32 KNetTurbo::send_ch(KNetSocket& s, KNetSession& session, u64 resend)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -676,7 +676,7 @@ s32 KNetController::send_ch(KNetSocket& s, KNetSession& session, u64 resend)
 }
 
 
-void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	KNetEnv::call_mem(KNTP_SKT_ON_CH, hdr.pkt_size);
 	if (len < KNetCH::PKT_SIZE)
@@ -794,7 +794,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 
 
 
-s32 KNetController::send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, KNetAddress& remote)
+s32 KNetTurbo::send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, KNetAddress& remote)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -805,7 +805,7 @@ s32 KNetController::send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, K
 	return send_packet(s, snd_head(), snd_len(), remote, KNetEnv::now_ms());
 }
 
-void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	KNetEnv::call_mem(KNTP_SKT_ON_SH, hdr.pkt_size);
 	if (len < KNetSH::PKT_SIZE)
@@ -857,7 +857,7 @@ void KNetController::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 }
 
 
-s32 KNetController::send_psh(KNetSession& s, u8 chl, const char* psh_buf, s32 len)
+s32 KNetTurbo::send_psh(KNetSession& s, u8 chl, const char* psh_buf, s32 len)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -882,7 +882,7 @@ s32 KNetController::send_psh(KNetSession& s, u8 chl, const char* psh_buf, s32 le
 
 
 
-void KNetController::on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	if (s.state_ != KNTS_ESTABLISHED)
 	{
@@ -945,7 +945,7 @@ void KNetController::on_psh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32
 	on_psh(*session, hdr, pkg, len, remote, now_ms);
 }
 
-void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	s.last_recv_ts_ = KNetEnv::now_ms();
 	if (hdr.chl == 0)
@@ -960,7 +960,7 @@ void KNetController::on_psh(KNetSession& s, KNetHeader& hdr, const char* pkg, s3
 	}
 }
 
-s32 KNetController::send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote)
+s32 KNetTurbo::send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -971,7 +971,7 @@ s32 KNetController::send_rst(KNetSocket& s, u64 session_id, KNetAddress& remote)
 	return 0;
 }
 
-s32 KNetController::send_rst(KNetSession& s, s32 code)
+s32 KNetTurbo::send_rst(KNetSession& s, s32 code)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -994,7 +994,7 @@ s32 KNetController::send_rst(KNetSession& s, s32 code)
 	return send_cnt == 0;
 }
 
-void KNetController::on_rst(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_rst(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms)
 {
 	if (s.state_ == KNTS_RST)
 	{
@@ -1042,7 +1042,7 @@ void KNetController::on_rst(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32
 	on_rst(*session, hdr, rst.rst_code, remote, now_ms);
 }
 
-void KNetController::on_rst(KNetSession& s, KNetHeader& hdr, s32 code, KNetAddress& remote, s64 now_ms)
+void KNetTurbo::on_rst(KNetSession& s, KNetHeader& hdr, s32 code, KNetAddress& remote, s64 now_ms)
 {
 	if (s.state_ != KNTS_ESTABLISHED)
 	{
@@ -1060,7 +1060,7 @@ void KNetController::on_rst(KNetSession& s, KNetHeader& hdr, s32 code, KNetAddre
 	return ;
 }
 
-s32 KNetController::check_hdr(KNetHeader& hdr, const char* data, s32 len)
+s32 KNetTurbo::check_hdr(KNetHeader& hdr, const char* data, s32 len)
 {
 	if (hdr.pkt_size != KNetHeader::HDR_SIZE + len)
 	{
@@ -1088,7 +1088,7 @@ s32 KNetController::check_hdr(KNetHeader& hdr, const char* data, s32 len)
 }
 
 
-s32 KNetController::make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len)
+s32 KNetTurbo::make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 version, u8 chl, u8 cmd, u8 flag, const char* pkg_data, s32 len)
 {
 	if (len + KNetHeader::HDR_SIZE > KNT_UPKT_SIZE)
 	{
@@ -1125,7 +1125,7 @@ s32 KNetController::make_hdr(KNetHeader& hdr, u64 session_id, u64 pkt_id, u16 ve
 
 
 
-s32 KNetController::close_session(s32 inst_id, bool passive, s32 code)
+s32 KNetTurbo::close_session(s32 inst_id, bool passive, s32 code)
 {
 	if (inst_id < 0 || inst_id >= (s32)sessions_.size())
 	{
@@ -1222,7 +1222,7 @@ s32 KNetController::close_session(s32 inst_id, bool passive, s32 code)
 
 
 
-s32 KNetController::remove_session(s32 inst_id)
+s32 KNetTurbo::remove_session(s32 inst_id)
 {
 	if (inst_id < 0 || inst_id >= (s32)sessions_.size())
 	{
@@ -1251,7 +1251,7 @@ s32 KNetController::remove_session(s32 inst_id)
 
 
 
-KNetSession* KNetController::ses_alloc()
+KNetSession* KNetTurbo::ses_alloc()
 {
 	for (u32 i = 0; i < sessions_.size(); i++)
 	{
@@ -1274,7 +1274,7 @@ KNetSession* KNetController::ses_alloc()
 	return &sessions_.back();
 }
 
-s32 KNetController::ses_free(KNetSession* session)
+s32 KNetTurbo::ses_free(KNetSession* session)
 {
 	if (session == NULL)
 	{
@@ -1292,7 +1292,7 @@ s32 KNetController::ses_free(KNetSession* session)
 
 
 
-s32 KNetController::do_tick()
+s32 KNetTurbo::do_tick()
 {
 	tick_cnt_++;
 	
@@ -1355,7 +1355,7 @@ s32 KNetController::do_tick()
 
 
 
-s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
+s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 {
 	if (session.state_ == KNTS_RST || session.state_ == KNTS_LINGER)
 	{
@@ -1441,7 +1441,7 @@ s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
 
 
 
-void KNetController::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms)
+void KNetTurbo::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 now_ms)
 {
 	KNetEnv::call_mem(KNTP_SES_RECV, len);
 	if (on_data_)
@@ -1450,7 +1450,7 @@ void KNetController::on_kcp_data(KNetSession& s, const char* data, s32 len, s64 
 	}
 }
 
-void KNetController::send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
+void KNetTurbo::send_data(KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
 {
 	KNetEnv::call_mem(KNTP_SES_SEND, len);
 	if (chl == 0)
@@ -1470,7 +1470,7 @@ void KNetController::send_data(KNetSession& s, u8 chl, const char* data, s32 len
 
 
 
-void KNetController::skt_reset(KNetSocket&s)
+void KNetTurbo::skt_reset(KNetSocket&s)
 {
 	s32 inst_id = s.inst_id_;
 	memset(&s, 0, sizeof(s));
@@ -1479,7 +1479,7 @@ void KNetController::skt_reset(KNetSocket&s)
 }
 
 
-KNetSocket* KNetController::skt_alloc()
+KNetSocket* KNetTurbo::skt_alloc()
 {
 	for (u32 i = 0; i < nss_.size(); i++)
 	{
@@ -1502,7 +1502,7 @@ KNetSocket* KNetController::skt_alloc()
 	return &nss_.back();
 }
 
-s32  KNetController::skt_free(KNetSocket& s)
+s32  KNetTurbo::skt_free(KNetSocket& s)
 {
 	if (s.state_ == KNTS_INVALID)
 	{
@@ -1535,7 +1535,7 @@ s32  KNetController::skt_free(KNetSocket& s)
 }
 
 
-s32 KNetController::get_session_count_by_state(u16 state)
+s32 KNetTurbo::get_session_count_by_state(u16 state)
 {
 	s32 count = 0;
 	for (auto& s: sessions_)
@@ -1549,7 +1549,7 @@ s32 KNetController::get_session_count_by_state(u16 state)
 }
 
 
-s32 KNetController::get_socket_count_by_state(u16 state)
+s32 KNetTurbo::get_socket_count_by_state(u16 state)
 {
 	s32 count = 0;
 	for (auto& s : nss_)

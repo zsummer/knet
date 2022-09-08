@@ -69,13 +69,13 @@ ENDMACRO(GROUP_SRC_BY_DIR)
 FILE(GLOB_RECURSE SOURCES_H 
 ${CMAKE_SOURCE_DIR}/src/base_layer/*.h 
 ${CMAKE_SOURCE_DIR}/src/kcp_layer/*.h 
-${CMAKE_SOURCE_DIR}/src/turbo/*.h
+${CMAKE_SOURCE_DIR}/src/turbo_layer/*.h
 )
 
 FILE(GLOB_RECURSE SOURCES_C 
 ${CMAKE_SOURCE_DIR}/src/base_layer/*.cpp 
 ${CMAKE_SOURCE_DIR}/src/kcp_layer/*.cpp 
-${CMAKE_SOURCE_DIR}/src/turbo/*.cpp
+${CMAKE_SOURCE_DIR}/src/turbo_layer/*.cpp
 )
 
 # 自动INCLUDE所有头文件的目录  (可能会影响到include的优先级)
@@ -141,8 +141,8 @@ FOREACH(SUB_DIR ${SUB_DIRS})
     ${CMAKE_SOURCE_DIR}/src/base_layer/*.h
     ${CMAKE_SOURCE_DIR}/src/kcp_layer/*.cpp
     ${CMAKE_SOURCE_DIR}/src/kcp_layer/*.h
-    ${CMAKE_SOURCE_DIR}/src/turbo/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/turbo/*.h
+    ${CMAKE_SOURCE_DIR}/src/turbo_layer/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/turbo_layer/*.h
     ${CMAKE_SOURCE_DIR}/tests/${SUB_DIR}/*.h 
     ${CMAKE_SOURCE_DIR}/tests/${SUB_DIR}/*.c 
     ${CMAKE_SOURCE_DIR}/tests/${SUB_DIR}/*.cc 

@@ -48,7 +48,7 @@ struct KNetSocketSlot
 	KNetAddress remote_;
 };
 
-class KNetController;
+class KNetTurbo;
 
 
 class KNetSession
@@ -57,7 +57,7 @@ public:
 	KNetSession(s32 inst_id);
 	~KNetSession();
 	s32 reset();
-	s32 init(KNetController& c, u16 flag = KNTF_SERVER);
+	s32 init(KNetTurbo& turbo, u16 flag = KNTF_SERVER);
 	s32 destory();
 
 public:

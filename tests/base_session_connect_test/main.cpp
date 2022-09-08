@@ -23,21 +23,21 @@ s32 test_session_connect_mix()
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 
-	std::shared_ptr< KNetController> sp_ctl = std::make_shared<KNetController>();
-	KNetController& controller = *sp_ctl;
+	std::shared_ptr< KNetTurbo> sp_tb = std::make_shared<KNetTurbo>();
+	KNetTurbo& turbo = *sp_tb;
 
-	s32 ret = controller.start_server(mc);
+	s32 ret = turbo.start_server(mc);
 	KNetAssert(ret == 0, "");
 
 	mc.clear();
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
 	KNetSession* session = NULL;
-	ret = controller.create_connect(mc, session);
+	ret = turbo.create_connect(mc, session);
 	KNetAssert(ret == 0, "");
 	KNetAssert(session != NULL, "");
 	s32 connect_tested = 1;
-	KNetOnConnect on_connect = [&](KNetController& c, KNetSession & session, bool connected, u16 state, s64 time_out)
+	KNetOnConnect on_connect = [&](KNetTurbo& turbo, KNetSession & session, bool connected, u16 state, s64 time_out)
 	{
 		connect_tested = 0;
 		if (!connected)
@@ -46,12 +46,12 @@ s32 test_session_connect_mix()
 		}
 	};
 
-	ret = controller.start_connect(*session, on_connect, 5000);
+	ret = turbo.start_connect(*session, on_connect, 5000);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 10; i++)
 	{
-		ret = controller.do_tick();
+		ret = turbo.do_tick();
 		KNetAssert(ret == 0, "");
 		if (connect_tested == 0)
 		{
@@ -63,40 +63,40 @@ s32 test_session_connect_mix()
 
 
 
-	controller.close_connect(session);
+	turbo.close_connect(session);
 	for (size_t i = 0; i < 10; i++)
 	{
-		ret = controller.do_tick();
+		ret = turbo.do_tick();
 		KNetAssert(ret == 0, "");
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
 	if (true)
 	{
-		for (auto &s : controller.sessions())
+		for (auto &s : turbo.sessions())
 		{
 			KNetAssert(s.state_ != KNTS_ESTABLISHED, "rst session ");
 		}
-		for (auto& s : controller.nss())
+		for (auto& s : turbo.nss())
 		{
 			if (s.state_ == KNTS_ESTABLISHED)
 			{
-				KNetAssert( controller.skt_is_server(s), "rst skt ");
+				KNetAssert( turbo.skt_is_server(s), "rst skt ");
 			}
 		}
 	}
 
 	LogInfo() << "rst test finish.";
-	ret = controller.stop();
+	ret = turbo.stop();
 	KNetAssert(ret == 0, "rst skt ");
 
 	if (true)
 	{
-		for (auto& s : controller.sessions())
+		for (auto& s : turbo.sessions())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst session ");
 		}
-		for (auto& s : controller.nss())
+		for (auto& s : turbo.nss())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst socket ");
 		}
@@ -122,25 +122,25 @@ s32 test_session_connect()
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 
-	std::shared_ptr< KNetController> sp_ctl1 = std::make_shared<KNetController>();
-	KNetController& controller1 = *sp_ctl1;
+	std::shared_ptr< KNetTurbo> sp_tb1 = std::make_shared<KNetTurbo>();
+	KNetTurbo& turbo1 = *sp_tb1;
 
-	std::shared_ptr< KNetController> sp_ctl2 = std::make_shared<KNetController>();
-	KNetController& controller2 = *sp_ctl2;
+	std::shared_ptr< KNetTurbo> sp_tb2 = std::make_shared<KNetTurbo>();
+	KNetTurbo& turbo2 = *sp_tb2;
 
 
-	s32 ret = controller1.start_server(mc);
+	s32 ret = turbo1.start_server(mc);
 	KNetAssert(ret == 0, "");
 
 	mc.clear();
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
 	KNetSession* session = NULL;
-	ret = controller2.create_connect(mc, session);
+	ret = turbo2.create_connect(mc, session);
 	KNetAssert(ret == 0, "");
 	KNetAssert(session != NULL, "");
 	s32 connect_tested = 1;
-	KNetOnConnect on_connect = [&](KNetController&c, KNetSession& session, bool connected, u16 state, s64 time_out)
+	KNetOnConnect on_connect = [&](KNetTurbo& turbo, KNetSession& session, bool connected, u16 state, s64 time_out)
 	{
 		connect_tested = 0;
 		if (!connected)
@@ -149,14 +149,14 @@ s32 test_session_connect()
 		}
 	};
 
-	ret = controller2.start_connect(*session, on_connect, 50000);
+	ret = turbo2.start_connect(*session, on_connect, 50000);
 	KNetAssert(ret == 0, "");
 
 	for (size_t i = 0; i < 10; i++)
 	{
-		ret = controller1.do_tick();
+		ret = turbo1.do_tick();
 		KNetAssert(ret == 0, "");
-		ret = controller2.do_tick();
+		ret = turbo2.do_tick();
 		KNetAssert(ret == 0, "");
 
 		if (connect_tested == 0)
@@ -169,69 +169,69 @@ s32 test_session_connect()
 
 
 
-	controller2.close_connect(session);
+	turbo2.close_connect(session);
 	for (size_t i = 0; i < 10; i++)
 	{
-		ret = controller1.do_tick();
+		ret = turbo1.do_tick();
 		KNetAssert(ret == 0, "");
-		ret = controller2.do_tick();
+		ret = turbo2.do_tick();
 		KNetAssert(ret == 0, "");
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
 	if (true)
 	{
-		for (auto& s : controller1.sessions())
+		for (auto& s : turbo1.sessions())
 		{
 			KNetAssert(s.state_ != KNTS_ESTABLISHED, "rst session ");
 		}
-		for (auto& s : controller1.nss())
+		for (auto& s : turbo1.nss())
 		{
 			if (s.state_ == KNTS_ESTABLISHED)
 			{
-				KNetAssert(controller1.skt_is_server(s), "rst skt ");
+				KNetAssert(turbo1.skt_is_server(s), "rst skt ");
 			}
 		}
 	}
 	if (true)
 	{
-		for (auto& s : controller2.sessions())
+		for (auto& s : turbo2.sessions())
 		{
 			KNetAssert(s.state_ != KNTS_ESTABLISHED, "rst session ");
 		}
-		for (auto& s : controller2.nss())
+		for (auto& s : turbo2.nss())
 		{
 			if (s.state_ == KNTS_ESTABLISHED)
 			{
-				KNetAssert(controller2.skt_is_server(s), "rst skt ");
+				KNetAssert(turbo2.skt_is_server(s), "rst skt ");
 			}
 		}
 	}
 
 
 	LogInfo() << "rst test finish.";
-	ret = controller1.stop();
+	ret = turbo1.stop();
 	KNetAssert(ret == 0, "rst skt ");
-	ret = controller2.stop();
+	ret = turbo2.stop();
 	KNetAssert(ret == 0, "rst skt ");
 	if (true)
 	{
-		for (auto& s : controller1.sessions())
+		for (auto& s : turbo1.sessions())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst session ");
 		}
-		for (auto& s : controller1.nss())
+		for (auto& s : turbo1.nss())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst socket ");
 		}
 	}
 	if (true)
 	{
-		for (auto& s : controller2.sessions())
+		for (auto& s : turbo2.sessions())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst session ");
 		}
-		for (auto& s : controller2.nss())
+		for (auto& s : turbo2.nss())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst socket ");
 		}

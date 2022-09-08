@@ -67,7 +67,7 @@ s32 KNetSession::reset()
 
 
 
-s32 KNetSession::init(KNetController& c, u16 flag)
+s32 KNetSession::init(KNetTurbo& turbo, u16 flag)
 {
 	if (kcp_ != NULL)
 	{
@@ -77,13 +77,13 @@ s32 KNetSession::init(KNetController& c, u16 flag)
 	flag_ = flag;
 	salt_id_ = ((u64)rand() << 32) | (u32)rand();
 
-	kcp_ = ikcp_create(0, (void*)&c, inst_id_);
+	kcp_ = ikcp_create(0, (void*)&turbo, inst_id_);
 	ikcp_nodelay(kcp_, 1, KNET_UPDATE_INTERVAL, 1, 1);
 	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);
 	ikcp_wndsize(kcp_, KNET_DEFAULT_SND_WND, KNET_DEFAULT_RCV_WND);
 	kcp_->rx_minrto = KNET_FAST_MIN_RTO;
-	kcp_->output = KNetController::kcp_output;
-	kcp_->writelog = KNetController::kcp_writelog;
+	kcp_->output = KNetTurbo::kcp_output;
+	kcp_->writelog = KNetTurbo::kcp_writelog;
 	kcp_->stream = 1;
 	//kcp_->logmask = (IKCP_LOG_OUT_WINS << 1) - 1;
 	KNetEnv::call_user(KNTP_SES_INIT);

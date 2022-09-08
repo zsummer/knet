@@ -11,7 +11,7 @@ if (!(x))  \
 	return -1;\
 }
 
-KNetController controller;
+KNetTurbo turbo;
 
 s32 test_session_bind()
 {
@@ -19,7 +19,7 @@ s32 test_session_bind()
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0});
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 	
-	s32 ret = controller.start_server(mc);
+	s32 ret = turbo.start_server(mc);
 	KNetAssert(ret == 0, "");
 
 	KNetSocket s1(1);
@@ -29,7 +29,7 @@ s32 test_session_bind()
 	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret != 0, "");
 
-	controller.stop();
+	turbo.stop();
 	ret = s1.init("127.0.0.1", 19870, "127.0.0.1", 8080);
 	KNetAssert(ret == 0, "");
 	ret = s2.init("127.0.0.2", 19870, "127.0.0.1", 8080);

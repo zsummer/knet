@@ -17,8 +17,8 @@
 */
 
 #pragma once
-#ifndef _KNET_CONTROLLER_H_
-#define _KNET_CONTROLLER_H_
+#ifndef _KNET_TURBO_H_
+#define _KNET_TURBO_H_
 #include "knet_base.h"
 #include <chrono>
 #include "knet_env.h"
@@ -35,12 +35,12 @@ using KNetSessions = zarray<KNetSession, KNET_MAX_SESSIONS>;
 
 
 
-class KNetController: public KNetSelect
+class KNetTurbo: public KNetSelect
 {
 public:
 	friend class KNetSession;
-	KNetController();
-	~KNetController();
+	KNetTurbo();
+	~KNetTurbo();
 
 public:
 	KNetOnAccept set_on_accept(KNetOnAccept on_accept) { KNetOnAccept old = on_accept_; on_accept_ = on_accept; return old; }
@@ -152,7 +152,7 @@ public:
 
 private:
 	u64  tick_cnt_;
-	u32 controller_state_;
+	u32 turbo_state_;
 	KNetSockets nss_;
 	KNetSessions sessions_;
 	char pkg_rcv_[KNT_UPKT_SIZE];

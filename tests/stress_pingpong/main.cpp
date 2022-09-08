@@ -45,13 +45,13 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
 	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
 
-	std::shared_ptr< KNetController> turbos[10];
+	std::shared_ptr< KNetTurbo> turbos[10];
 	for (s32 i = 0; i < 10; i++)
 	{
-		turbos[i] = std::make_shared<KNetController>();
+		turbos[i] = std::make_shared<KNetTurbo>();
 	}
 
-	KNetController& server_c = *turbos[0];
+	KNetTurbo& server_c = *turbos[0];
 
 	s32 ret = server_c.start_server(mc);
 	KNetAssert(ret == 0, "");
@@ -64,7 +64,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	}
 
 
-	KNetOnConnect on_connect = [&](KNetController& c, KNetSession& session, bool connected, u16 state, s64 time_out)
+	KNetOnConnect on_connect = [&](KNetTurbo& turbo, KNetSession& session, bool connected, u16 state, s64 time_out)
 	{
 		if (connected)
 		{
@@ -78,12 +78,12 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	};
 
 
-	KNetOnData on_data = [&](KNetController& c, KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
+	KNetOnData on_data = [&](KNetTurbo& turbo, KNetSession& s, u8 chl, const char* data, s32 len, s64 now_ms)
 	{
-		c.send_data(s, 0, data, len, KNetEnv::now_ms());
+		turbo.send_data(s, 0, data, len, KNetEnv::now_ms());
 	};
 
-	KNetOnDisconnect on_disconnect = [&](KNetController& c, KNetSession& session, bool passive)
+	KNetOnDisconnect on_disconnect = [&](KNetTurbo& turbo, KNetSession& session, bool passive)
 	{
 		LogDebug() << "close session:" << session.session_id_ << ", is server:" << session.is_server() << ", is passive:" << passive;
 	};
@@ -98,9 +98,9 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	for (s32 i = 0; i < session_count; i++)
 	{
 		KNetSession* session = NULL;
-		std::shared_ptr< KNetController> pc = turbos[i%10];
-		KNetController& c = *pc;
-		ret = c.create_connect(mc, session);
+		std::shared_ptr< KNetTurbo> pc = turbos[i%10];
+		KNetTurbo& turbo = *pc;
+		ret = turbo.create_connect(mc, session);
 		if (ret != 0)
 		{
 			//volatile int aa = 0;
@@ -108,7 +108,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		KNetAssert(ret == 0, "");
 		KNetAssert(session != NULL, "");
 
-		ret = c.start_connect(*session, on_connect, 5000);
+		ret = turbo.start_connect(*session, on_connect, 5000);
 		if (ret != 0)
 		{
 			//volatile int aa = 0;
@@ -254,13 +254,13 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 
 	for (s32 i = 0; i < 10; i++)
 	{
-		auto& controller = *turbos[i];
+		auto& turbo = *turbos[i];
 
-		for (auto& s : controller.sessions())
+		for (auto& s : turbo.sessions())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst session ");
 		}
-		for (auto& s : controller.nss())
+		for (auto& s : turbo.nss())
 		{
 			KNetAssert(s.state_ == KNTS_INVALID, "rst socket ");
 		}
