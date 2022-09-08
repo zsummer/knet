@@ -757,6 +757,11 @@ void KNetTurbo::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 
 
 	KNetSession* session = ses_alloc();
+	if (session == NULL)
+	{
+		LogWarn() << "too many client session.  can not create new session;   hdr" << hdr << ", s:" << s;
+		return ;
+	}
 	session->init(*this);
 	session->state_ = KNTS_ESTABLISHED;
 	session->flag_ = KNTF_SERVER;

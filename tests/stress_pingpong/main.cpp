@@ -1,6 +1,5 @@
 
 
-//#define KNET_MAX_SOCKETS 1000
 #include "knet_base.h"
 #include "knet_socket.h"
 #include "knet_turbo.h"
