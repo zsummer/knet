@@ -7,13 +7,24 @@
 #include <memory>
 KNetEnv env_init_;
 
-
+/*
 #define KNetAssert(x, desc)  \
 if (!(x))  \
 {   \
 	LogError() << desc << "has error.";  \
 	KNetEnv::serialize(); \
 	return -1;\
+}
+*/
+void KNetAssert(bool assert_expr, const char* s)
+{
+	if (!assert_expr)
+	{
+		LogError() << s;
+		KNetEnv::serialize(); 
+		exit(-1);
+	}
+
 }
 
 
@@ -104,15 +115,20 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		}
 		KNetAssert(ret == 0, "");
 		KNetAssert(KNetEnv::error_count() == 0, "");
-		for (s32 i = 0; i < 10; i++)
+		for (s32 k = 0; k < 10; k++)
 		{
-			for (s32 j = 0; j < 10; j++)
+			for (s32 id = 0; id < 10; id++)
 			{
-				ret = turbos[i]->do_tick();
+				ret = turbos[id]->do_tick();
 				KNetAssert(ret == 0, "");
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+
+		if (i%20 == 0)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+		}
+
 	}
 
 	for (s32 i = 0; i < 10; i++)
@@ -137,7 +153,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		if (KNetEnv::now_ms() - now > 10 * 1000)
 		{
 			KNetEnv::serialize();
-			KNetAssert(false, "connect timeout");
+			KNetAssert(false, "waiting all session connected fail");
 		}
 		
 	}

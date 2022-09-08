@@ -60,6 +60,12 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
     {
         return -5;
     }
+
+    if (skt_ >= 1024) //0-1023
+    {
+        destroy();
+        return -16;
+    }
     
 
     ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());
