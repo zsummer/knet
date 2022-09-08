@@ -1,4 +1,4 @@
 #!/bin/bash
 cd ..
-bash make.sh
+bash make.sh $*
 
