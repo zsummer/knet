@@ -1308,6 +1308,7 @@ s32 KNetTurbo::do_tick()
 {
 	tick_cnt_++;
 	
+	s64 now_ms = KNetEnv::now_ms();
 
 	for (auto&s : nss_)
 	{
@@ -1318,16 +1319,12 @@ s32 KNetTurbo::do_tick()
 			{
 				LogError() << "errro";
 			}
+			continue;
 		}
+
+		on_readable(s, now_ms);
 	}
 
-	s32 ret = do_select(nss_, 0);
-	if (ret != 0)
-	{
-		LogError() << "errro";
-	}
-
-	s64 now_ms = KNetEnv::now_ms();
 	for (auto& session : sessions_)
 	{
 
@@ -1339,13 +1336,6 @@ s32 KNetTurbo::do_tick()
 		if (session.state_ == KNTS_ESTABLISHED)
 		{
 			ikcp_update(session.kcp_, (u32)tick_cnt_ * 10);
-			/*	
-			s32 len = ikcp_recv(session.kcp_, kcp_rcv_, KCP_RECV_BUFF_LEN);
-			if (len > 0)
-			{
-				on_kcp_data(session, kcp_rcv_, len, KNetEnv::now_ms());
-			}
-			*/
 			s32 len = ikcp_recv(session.kcp_, pkg_rcv_, KNT_UPKT_SIZE);
 			if (len > 0)
 			{

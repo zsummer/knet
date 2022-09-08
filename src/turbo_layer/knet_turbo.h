@@ -22,7 +22,6 @@
 #include "knet_base.h"
 #include <chrono>
 #include "knet_env.h"
-#include "knet_select.h"
 #include "knet_socket.h"
 #include "knet_session.h"
 #include "knet_proto.h"
@@ -33,9 +32,11 @@
 class KNetSession;
 using KNetSessions = zarray<KNetSession, KNET_MAX_SESSIONS>;
 
+class KNetSocket;
+using KNetSockets = zarray<KNetSocket, KNET_MAX_SOCKETS>;
 
 
-class KNetTurbo: public KNetSelect
+class KNetTurbo
 {
 public:
 	friend class KNetSession;
@@ -83,7 +84,7 @@ private:
 	s32 remove_session(s32 inst_id);
 	s32 destroy();
 	s32 recv_one_packet(KNetSocket&, s64 now_ms);
-	virtual void on_readable(KNetSocket&, s64 now_ms) override;
+	void on_readable(KNetSocket&, s64 now_ms);
 	
 
 
@@ -160,8 +161,6 @@ private:
 	char pkg_snd_[KNT_UPKT_SIZE];
 	s32 pkg_snd_offset_;
 
-	//char kcp_rcv_[KCP_RECV_BUFF_LEN];
-	//s32 kcp_rcv_offset_;
 
 
 	//KNetSessions sessions_;

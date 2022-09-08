@@ -22,7 +22,6 @@
 #include "knet_base.h"
 #include <chrono>
 #include "knet_env.h"
-#include "knet_select.h"
 #include "knet_socket.h"
 #include "knet_proto.h"
 

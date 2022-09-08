@@ -99,10 +99,6 @@ const static s32 KNT_UPKT_SIZE = 1350;
 #define KNET_MAX_SOCKETS 1000
 #endif // KNET_MAX_SOCKETS
 
-static_assert(KNET_MAX_SOCKETS >= 10, "");
-static_assert(KNET_MAX_SOCKETS < 1024, "");
-
-#define KNET_DEBUG_SELECT 1
 
 
 
