@@ -17,7 +17,7 @@
 */
 
 #include "knet_session.h"
-#include "knet_controller.h"
+#include "knet_turbo.h"
 
 KNetSession::KNetSession(s32 inst_id)
 {
