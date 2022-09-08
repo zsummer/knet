@@ -280,18 +280,18 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 		s32 ret = ns->init(c.localhost.c_str(), c.localport, c.remote_ip.c_str(), c.remote_port);
 		if (ret != 0)
 		{
-			LogError() <<"start_connect on init error. session:" << session <<", error:" << ret <<  ", last error code:" << KNetEnv::error_code() << " :  " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port ;
+			LogError() <<"start_connect skt init error. session:" << session <<", error:" << ret <<  ", last error code:" << KNetEnv::error_code() << " :  " << c.localhost << ":" << c.localport << " --> " << c.remote_ip << ":" << c.remote_port ;
 			KNetEnv::error_count()++;
 			continue;
 		}
 
-		LogDebug() << "start_connect init slot[" << i <<"]: session" << session << "  : " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() ;
 
 		ret = ns->set_skt_recv_buffer(KNET_CLIENT_RECV_BUFF_SIZE);
 		if (ret != 0)
 		{
 			LogError() << "init " << c.localhost << ":" << c.localport << " has error";
 			KNetEnv::error_count()++;
+			skt_free(*ns);
 			continue;
 		}
 		ret = ns->set_skt_send_buffer(KNET_CLIENT_SEND_BUFF_SIZE);
@@ -299,12 +299,14 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 		{
 			LogError() << "init " << c.localhost << ":" << c.localport << " has error";
 			KNetEnv::error_count()++;
+			skt_free(*ns);
 			continue;
 		}
 
 		ns->flag_ = KNTF_CLINET;
 		ns->slot_id_ = i;
-		
+		ns->salt_id_ = session.salt_id_;
+
 		KNetSocketSlot slot;
 		slot.inst_id_ = ns->inst_id_;
 		slot.remote_ = ns->remote_;
@@ -315,7 +317,10 @@ s32 KNetController::start_connect(KNetSession& session, KNetOnConnect on_connect
 		ns->probe_seq_id_ = KNetEnv::create_seq_id();
 		ns->state_ = KNTS_PROBE;
 
-		ret = send_probe(*ns);
+		LogDebug() << "start_connect init slot[" << i << "]: session" << session << "  : " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string() << ", skt:" << *ns <<", shake:" << ns->probe_shake_id_ <<", salt:" << ns->salt_id_;
+
+
+		ret = send_probe(*ns, 0);
 		if (ret != 0)
 		{
 			LogError() << "start_connect error on send probe by slot[" << i << "]: session" << session << ", error:" << ret << "  : " << ns->local_.debug_string() << " --> " << ns->remote_.debug_string();
@@ -450,7 +455,7 @@ s32 KNetController::send_packet(KNetSocket& s, char* pkg, s32 len, KNetAddress& 
 }
 
 
-s32  KNetController::send_probe(KNetSocket& s)
+s32  KNetController::send_probe(KNetSocket& s, u64 resend)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -459,7 +464,8 @@ s32  KNetController::send_probe(KNetSocket& s)
 	probe.client_ms = KNetEnv::now_ms();
 	probe.client_seq_id = s.probe_seq_id_;
 	probe.shake_id = 0;
-
+	probe.salt_id = s.salt_id_;
+	probe.resend = resend;
 
 	set_snd_data_offset(knet_encode_packet(snd_data(), probe));
 	make_hdr(hdr, 0, 0, 0, 0, KNTC_PB, 0);
@@ -502,6 +508,11 @@ void KNetController::on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s
 		LogWarn() << "on_probe error decode. s:" << s << ", hdr:" << hdr << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
 		return;
 	}
+	if (packet.resend > 0)
+	{
+		LogWarn() << "on_probe (from resend). s:" << s << ", hdr:" << hdr << ", shake:" << packet.shake_id << ", salt:" << packet.salt_id;
+	}
+
 	send_probe_ack(s, packet, remote);
 	return;
 }
@@ -606,7 +617,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 		}
 		nss_[slot.inst_id_].probe_shake_id_ = s.probe_shake_id_;
 		nss_[slot.inst_id_].state_ = session.state_;
-		s32 ret = send_ch(nss_[slot.inst_id_], session);
+		s32 ret = send_ch(nss_[slot.inst_id_], session, 0);
 		if (ret == 0)
 		{
 			snd_ch_cnt++;
@@ -631,7 +642,7 @@ void KNetController::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pk
 	return;
 }
 
-s32 KNetController::send_ch(KNetSocket& s, KNetSession& session)
+s32 KNetController::send_ch(KNetSocket& s, KNetSession& session, u64 resend)
 {
 	KNetHeader hdr;
 	hdr.reset();
@@ -639,7 +650,10 @@ s32 KNetController::send_ch(KNetSocket& s, KNetSession& session)
 	memset(&ch, 0, sizeof(ch));
 	KNetEnv::fill_device_info(ch.dvi);
 	ch.shake_id = s.probe_shake_id_;
+	ch.salt_id = s.salt_id_;
 	ch.session_id = session.session_id_;
+	ch.resend = resend;
+
 	if (ch.session_id != 0 && !session.encrypt_key.empty())
 	{
 		strncpy(ch.cg, session.encrypt_key.c_str(), 16);
@@ -684,10 +698,21 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 		return;
 	}
 
+	if (ch.resend > 0)
+	{
+		LogWarn() <<" shake_id:" << ch.shake_id << ", salt : " << ch.salt_id <<", skt:" << s;
+
+	}
 
 	auto iter = handshakes_s_.find(ch.shake_id);
 	if (iter != handshakes_s_.end())
 	{
+		if (iter->second->salt_id_ != ch.salt_id)
+		{
+			LogWarn() << "session:" << iter->second << ", on shakes error.  shake_id:" << ch.shake_id << ", but old salt:" << iter->second->salt_id_ << ", ch salt:" << ch.salt_id;
+			return;
+		}
+
 		KNetSH sh;
 		sh.noise = 0;
 		sh.result = 0;
@@ -736,6 +761,7 @@ void KNetController::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 
 	session->state_ = KNTS_ESTABLISHED;
 	session->flag_ = KNTF_SERVER;
 	session->shake_id_ = ch.shake_id;
+	session->salt_id_ = ch.salt_id;
 	session->session_id_ = ch.shake_id;
 
 	session->slots_[hdr.slot].inst_id_ = s.inst_id();
@@ -1355,7 +1381,7 @@ s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
 	{
 		if (session.connect_expire_time_ < now_ms)
 		{
-			LogWarn() << "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " connect fail.  resend count:" << session.connect_resends_ << ", last state:" << session.state_;
+			LogWarn() << "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " connect fail.  resend count:" << session.connect_resends_ << ", last state:" << session.state_ << ", shake:" << session.shake_id_ << ", salt:" << session.salt_id_;
 			if (session.on_connected_)
 			{
 				auto on = std::move(session.on_connected_);
@@ -1381,8 +1407,8 @@ s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
 				{
 					session.connect_resends_++;
 					KNetEnv::call_mem(KNTP_SKT_R_PROBE, 1);
-					LogWarn() << "skt:" << nss_[s.inst_id_] << " resend probe.  session : " << session;
-					send_probe(nss_[s.inst_id_]);
+					LogWarn() << "skt:" << nss_[s.inst_id_] << " resend probe.  session : " << session << ", shake:" << session.shake_id_ << ", salt:" << session.salt_id_;
+					send_probe(nss_[s.inst_id_], session.connect_resends_);
 				}
 			}
 		}
@@ -1398,8 +1424,8 @@ s32 KNetController::on_timeout(KNetSession& session, s64 now_ms)
 				}
 				session.connect_resends_++;
 				KNetEnv::call_mem(KNTP_SKT_R_CH, 1);
-				LogWarn() << "skt:" << nss_[s.inst_id_] << " resend ch.  session : " << session;
-				send_ch(nss_[s.inst_id_], session);
+				LogWarn() << "skt:" << nss_[s.inst_id_] << " resend ch.  session : " << session << ", shake:" << session.shake_id_ << ", salt:" << session.salt_id_;
+				send_ch(nss_[s.inst_id_], session, session.connect_resends_);
 				
 			}
 		}

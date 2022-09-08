@@ -93,13 +93,13 @@ private:
 	static void kcp_writelog(const char* log, struct IKCPCB* kcp, void* user, int user_id);
 
 
-	s32 send_probe(KNetSocket& s);
+	s32 send_probe(KNetSocket& s, u64 resend);
 	void on_probe(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 	s32 send_probe_ack(KNetSocket& s, const KNetProbe& probe, KNetAddress& remote);
 	void on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
-	s32 send_ch(KNetSocket& s, KNetSession& session);
+	s32 send_ch(KNetSocket& s, KNetSession& session, u64 resend);
 	void on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, KNetAddress& remote, s64 now_ms);
 
 	s32 send_sh(KNetSocket& s, const KNetCH& ch, const KNetSH& sh, KNetAddress& remote);

@@ -68,6 +68,7 @@ public:
 	u16 flag_;
 	u64 session_id_;
 	u64 shake_id_;
+	u64 salt_id_;
 	u64 snd_pkt_id_;
 
 

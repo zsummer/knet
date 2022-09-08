@@ -307,10 +307,12 @@ static inline const char* KNetDecodeKNetDeviceInfo(const char* p, KNetDeviceInfo
 
 struct KNetProbe
 {
-	static const s32 PKT_SIZE = 8 + 8 + 8 + KNetDeviceInfo::PKT_SIZE;
+	static const s32 PKT_SIZE = 8 + 8 + 8 + 8 + 8 + KNetDeviceInfo::PKT_SIZE;
 	s64 client_ms;
 	u64 client_seq_id;
 	u64 shake_id;
+	u64 salt_id;
+	u64 resend;
 	KNetDeviceInfo dvi;
 };
 static_assert(KNetProbe::PKT_SIZE < KNT_UDAT_SIZE&& KNetProbe::PKT_SIZE> 200, "");
@@ -322,6 +324,8 @@ static inline char* knet_encode_packet(char* p, const KNetProbe& pkt)
 	p = ikcp_encode64s(p, pkt.client_ms);
 	p = ikcp_encode64u(p, pkt.client_seq_id);
 	p = ikcp_encode64u(p, pkt.shake_id);
+	p = ikcp_encode64u(p, pkt.salt_id);
+	p = ikcp_encode64u(p, pkt.resend);
 	p = KNetEncodeKNetDeviceInfo(p, pkt.dvi);
 	return p;
 }
@@ -331,6 +335,8 @@ static inline const char* knet_decode_packet(const char* p, KNetProbe& pkt)
 	p = ikcp_decode64s(p, &pkt.client_ms);
 	p = ikcp_decode64u(p, &pkt.client_seq_id);
 	p = ikcp_decode64u(p, &pkt.shake_id);
+	p = ikcp_decode64u(p, &pkt.salt_id);
+	p = ikcp_decode64u(p, &pkt.resend);
 	p = KNetDecodeKNetDeviceInfo(p, pkt.dvi);
 	return p;
 }
@@ -371,8 +377,10 @@ static inline const char* knet_decode_packet(const char* p, KNetProbeAck& pkt)
 
 struct KNetCH
 {
-	static const s32 PKT_SIZE = 8 + 8 + 16*2 + KNetDeviceInfo::PKT_SIZE + 400;
+	static const s32 PKT_SIZE = 8 + 8 + 8 + 8 + 16*2 + KNetDeviceInfo::PKT_SIZE + 400;
 	u64 shake_id;
+	u64 salt_id;
+	u64 resend;
 	u64 session_id;
 	char cg[16];
 	char cp[16];
@@ -385,6 +393,8 @@ static_assert(sizeof(KNetCH) == KNetCH::PKT_SIZE, "");
 static inline char* knet_encode_packet(char* p, const KNetCH& pkt)
 {
 	p = ikcp_encode64u(p, pkt.shake_id);
+	p = ikcp_encode64u(p, pkt.salt_id);
+	p = ikcp_encode64u(p, pkt.resend);
 	p = ikcp_encode64u(p, pkt.session_id);
 	p = ikcp_encode_str(p, pkt.cg, 16);
 	p = ikcp_encode_str(p, pkt.cp, 16);
@@ -396,6 +406,8 @@ static inline char* knet_encode_packet(char* p, const KNetCH& pkt)
 static inline const char* knet_decode_packet(const char* p, KNetCH& pkt)
 {
 	p = ikcp_decode64u(p, &pkt.shake_id);
+	p = ikcp_decode64u(p, &pkt.salt_id);
+	p = ikcp_decode64u(p, &pkt.resend);
 	p = ikcp_decode64u(p, &pkt.session_id);
 	p = ikcp_decode_str(p, pkt.cg, 16);
 	p = ikcp_decode_str(p, pkt.cp, 16);

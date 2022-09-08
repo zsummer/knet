@@ -72,7 +72,8 @@ public:
     u8  slot_id_;
     s32 refs_;
     s32 client_session_inst_id_;
-    
+    u64 salt_id_;
+
     u64 probe_seq_id_;
     s64 probe_last_ping_;
     s64 probe_avg_ping_;

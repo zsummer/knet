@@ -118,6 +118,10 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 			ret = controller.do_tick();
 			KNetAssert(ret == 0, "");
 		}
+		if ((i%10) ==4)
+		{
+			//std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+		}
 
 	}
 

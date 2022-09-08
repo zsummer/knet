@@ -45,6 +45,7 @@ s32 KNetSession::reset()
 	kcp_ = 0;
 	session_id_ = 0;
 	shake_id_ = 0;
+	salt_id_ = 0;
 	snd_pkt_id_ = 0;
 	encrypt_key = "";
 	configs_.clear();
@@ -74,6 +75,8 @@ s32 KNetSession::init(KNetController& c, u16 flag)
 	}
 	state_ = KNTS_CREATED;
 	flag_ = flag;
+	salt_id_ = ((u64)rand() << 32) | (u32)rand();
+
 	kcp_ = ikcp_create(0, (void*)&c, inst_id_);
 	ikcp_nodelay(kcp_, 1, KNET_UPDATE_INTERVAL, 1, 1);
 	ikcp_setmtu(kcp_, KNT_UDAT_SIZE);

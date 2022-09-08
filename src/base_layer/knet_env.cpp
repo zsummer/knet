@@ -66,6 +66,7 @@ void KNetEnv::serialize()
     };
     KNetProfInst.serialize(PROF_SER_DELCARE, call_log);
 }
+
 u64 KNetEnv::create_seq_id()
 {
     static u64 seq_id = 0;
