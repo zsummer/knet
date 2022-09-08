@@ -30,6 +30,7 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 	tv.tv_sec = 0;
 	tv.tv_usec = (int)wait_ms * 1000;
 
+#if !(KNET_DEBUG_SELECT)
 	fd_set rdfds;
 	FD_ZERO(&rdfds);
 	SOCKET max_fd = -1; //windows is error but will ignore
@@ -46,6 +47,12 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 		}
 		FD_SET(s.skt(), &rdfds);
 		set_cnt++;
+		if (set_cnt >= FD_SETSIZE)
+		{
+			KNetEnv::error_count()++;
+			LogError() << " socket too many!!!. count:" << set_cnt;
+			break;
+		}
 	}
 
 	if (set_cnt == 0)
@@ -69,6 +76,9 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 		LogError() << " error";
 		return -2;
 	}
+#endif
+
+
 	s64 post_now_ms = KNetEnv::now_ms();
 	for (auto& s : sets)
 	{
@@ -76,11 +86,15 @@ s32 KNetSelect::do_select(KNetSockets& sets, s64 wait_ms)
 		{
 			continue;
 		}
-
+#if !(KNET_DEBUG_SELECT)
 		if (FD_ISSET(s.skt(), &rdfds))
 		{
 			on_readable(s, post_now_ms);
 		}
+#else
+		on_readable(s, post_now_ms);
+#endif
+
 	}
 	return 0;
 }

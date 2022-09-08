@@ -61,11 +61,22 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
         return -5;
     }
 
+#if !(KNET_DEBUG_SELECT)
+
+#ifndef WIN32
     if (skt_ >= 1024) //0-1023
     {
         destroy();
         return -16;
     }
+#endif // WIN32
+
+#endif
+
+
+
+
+
     
 
     ret = bind(skt_, local_.sockaddr_ptr(), local_.sockaddr_len());

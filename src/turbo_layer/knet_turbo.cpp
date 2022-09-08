@@ -850,7 +850,14 @@ void KNetTurbo::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 	{
 		auto on = session.on_connected_;
 		session.on_connected_ = nullptr;
-
+		for (auto& s : session.slots_)
+		{
+			if (s.inst_id_ == -1)
+			{
+				continue;
+			}
+			LogDebug() << "session:" <<  session << ".  slot skt:" << nss_[s.inst_id_];
+		}
 		on(*this, session, true, session.state_, 0);
 	}
 	//send_psh(session, "123", 4);
@@ -1382,6 +1389,14 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 		if (session.connect_expire_time_ < now_ms)
 		{
 			LogWarn() << "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " connect fail.  resend count:" << session.connect_resends_ << ", last state:" << session.state_ << ", shake:" << session.shake_id_ << ", salt:" << session.salt_id_;
+			for (auto& s: session.slots_)
+			{
+				if (s.inst_id_ == -1)
+				{
+					continue;
+				}
+				LogWarn() << "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " connect fail.  slot skt:" <<nss_[s.inst_id_];
+			}
 			if (session.on_connected_)
 			{
 				auto on = std::move(session.on_connected_);

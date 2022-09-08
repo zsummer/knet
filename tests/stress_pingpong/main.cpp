@@ -283,13 +283,20 @@ int main(int argc, char* argv[])
 	FNLog::FastStartDebugLogger();
 	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
-	s32 sessions = 200;
+	s32 sessions = 500;
+
+#ifdef WIN32
+	sessions = 250;
+#endif // WIN32
+
+
 	if (argc > 1)
 	{
 		sessions = atoi(argv[1]);
 	}
 	KNetAssert(test_session_connect_mix(sessions, true, 1, 5, 20000, 200) == 0, "");
 	KNetAssert(test_session_connect_mix(sessions, true, 1, 5, 20000, 8000) == 0, "");
+
 
 
 	return 0;

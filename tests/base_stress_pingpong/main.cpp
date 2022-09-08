@@ -63,6 +63,8 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		else
 		{
 			LogError() << "connect error: last state:" << state <<", time_out:" << time_out;
+			KNetEnv::serialize();
+			exit(-2);
 			return;
 		}
 		static char buf[KNT_KCP_DATA_SIZE];
@@ -177,12 +179,22 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 int main()
 {
 	FNLog::FastStartDebugLogger();
-	//FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
+	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
+#ifdef WIN32
 	KNetAssert(test_session_connect_mix(1, false, 1, 10, 500) == 0, "");
-	KNetAssert(test_session_connect_mix(400, false, 1, 10, 500) == 0, "");
+	KNetAssert(test_session_connect_mix(50, false, 1, 10, 500) == 0, "");
+	KNetAssert(test_session_connect_mix(50, false, 1, 10, 1000) == 0, "");
+	KNetAssert(test_session_connect_mix(25, true, 20, 10, 1000) == 0, "");
+#else
+	KNetAssert(test_session_connect_mix(1, false, 1, 10, 500) == 0, "");
+	KNetAssert(test_session_connect_mix(500, false, 1, 10, 500) == 0, "");
 	KNetAssert(test_session_connect_mix(800, false, 1, 10, 1000) == 0, "");
-	KNetAssert(test_session_connect_mix(400, true, 20, 10, 1000) == 0, "");
+	KNetAssert(test_session_connect_mix(500, true, 20, 10, 1000) == 0, "");
+
+#endif // WIN32
+
+
 
 
 	return 0;
