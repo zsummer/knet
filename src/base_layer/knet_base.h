@@ -20,9 +20,8 @@
 #ifndef _KNET_BASE_H_
 #define _KNET_BASE_H_
 
-#include "zlist_ext.h"
+
 #include "zarray.h"
-#include "zlist.h"
 #include "fn_log.h"
 
 

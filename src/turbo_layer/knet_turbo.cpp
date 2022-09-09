@@ -330,12 +330,12 @@ s32 KNetTurbo::start_connect(KNetSession& session, KNetOnConnect on_connected, s
 		s_count++;
 	}
 
+	s64 now_ms = KNetEnv::now_ms();
 	session.state_ = KNTS_PROBE;
+	session.state_time_ = now_ms;
 	if (s_count > 0)
 	{
-		s64 now_ms = KNetEnv::now_ms();
 		session.on_connected_ = on_connected;
-		session.connect_time_ = now_ms;
 		session.connect_expire_time_ = now_ms + timeout;
 		session.last_send_ts_ = now_ms;
 		KNetEnv::call_user(KNTP_SES_CONNECT);
@@ -601,6 +601,7 @@ void KNetTurbo::on_probe_ack(KNetSocket& s, KNetHeader& hdr, const char* pkg, s3
 		return;
 	}
 	session.last_recv_ts_ = now_ms;
+	session.state_time_ = now_ms;
 	session.state_ = KNTS_CH;
 	session.shake_id_ = s.probe_shake_id_;
 	s32 snd_ch_cnt = 0;
@@ -701,8 +702,35 @@ void KNetTurbo::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 	if (ch.resend > 0)
 	{
 		LogWarn() <<" shake_id:" << ch.shake_id << ", salt : " << ch.salt_id <<", skt:" << s;
-
 	}
+	KNetSession* session = NULL;
+	
+	if (false)
+	{
+		auto iter = handshakes_s_.find(ch.shake_id);
+		if (iter != handshakes_s_.end())
+		{
+			if (iter->second->salt_id_ != ch.salt_id)
+			{
+				LogWarn() << "session:" << iter->second << ", on shakes error.  shake_id:" << ch.shake_id << ", but old salt:" << iter->second->salt_id_ << ", ch salt:" << ch.salt_id;
+				return;
+			}
+			session = iter->second;
+		}
+	}
+
+	if (session == NULL && ch.session_id != 0 && false)
+	{
+		//session auth  
+		u64 new_session_id = ch.shake_id;
+		if (establisheds_s_.find(ch.session_id) != establisheds_s_.end())
+		{
+
+		}
+	}
+
+
+
 
 	auto iter = handshakes_s_.find(ch.shake_id);
 	if (iter != handshakes_s_.end())
@@ -756,7 +784,8 @@ void KNetTurbo::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 
 
 
-	KNetSession* session = ses_alloc();
+
+	session = ses_alloc();
 	if (session == NULL)
 	{
 		LogWarn() << "too many client session.  can not create new session;   hdr" << hdr << ", s:" << s;
@@ -764,7 +793,8 @@ void KNetTurbo::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 	}
 	session->init(*this);
 	session->state_ = KNTS_ESTABLISHED;
-	session->flag_ = KNTF_SERVER;
+	session->state_time_ = now_ms;
+	session->flag_ = KNTF_SERVER | KNTF_SHAKE;
 	session->shake_id_ = ch.shake_id;
 	session->salt_id_ = ch.salt_id;
 	session->session_id_ = ch.shake_id;
@@ -838,6 +868,7 @@ void KNetTurbo::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 		return;
 	}
 	session.state_ = KNTS_ESTABLISHED;
+	session.state_time_ = now_ms;
 	session.session_id_ = sh.session_id;
 	for (auto& slot: session.slots_)
 	{
@@ -1211,11 +1242,13 @@ s32 KNetTurbo::close_session(s32 inst_id, bool passive, s32 code)
 		if (passive)
 		{
 			session.state_ = KNTS_RST;
+			session.state_time_ = KNetEnv::now_ms();
 			LogDebug() << "session:" << session.session_id_ << " to passive rst";
 		}
 		else
 		{
 			session.state_ = KNTS_LINGER;
+			session.state_time_ = KNetEnv::now_ms();
 			LogDebug() << "session:" << session.session_id_ << " to linger";
 		}
 
@@ -1227,6 +1260,7 @@ s32 KNetTurbo::close_session(s32 inst_id, bool passive, s32 code)
 	else
 	{
 		session.state_ = KNTS_LINGER;
+		session.state_time_ = KNetEnv::now_ms();
 		LogDebug() << "session:" << session.session_id_ << " to linger";
 	}
 	return 0;
@@ -1272,6 +1306,7 @@ KNetSession* KNetTurbo::ses_alloc()
 		{
 			KNetEnv::call_user(KNTP_SES_ALLOC);
 			s.state_ = KNTS_CREATED;
+			s.state_time_ = KNetEnv::now_ms();
 			return &s;
 		}
 	}
@@ -1282,6 +1317,7 @@ KNetSession* KNetTurbo::ses_alloc()
 	}
 	sessions_.emplace_back(sessions_.size());
 	sessions_.back().state_ = KNTS_CREATED;
+	sessions_.back().state_time_ = KNetEnv::now_ms();
 	KNetEnv::call_user(KNTP_SES_ALLOC);
 	return &sessions_.back();
 }
@@ -1364,6 +1400,7 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 		if (abs(session.last_recv_ts_ - now_ms) > 5000 && abs(session.last_send_ts_ - now_ms) > 5000)
 		{
 			session.state_ = KNTS_CREATED;
+			session.state_time_ = KNetEnv::now_ms();
 		}
 		return 0;
 	}
@@ -1375,6 +1412,22 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 		{
 			remove_session(session.inst_id_);
 		}
+		return 0;
+	}
+
+	if (session.state_ == KNTS_ESTABLISHED &&  session.is_server() &&  session.flag_ & KNTF_SHAKE &&  abs(session.state_time_ - now_ms) > 5000 )
+	{
+		session.flag_ &= ~(KNTF_SHAKE);
+		if (handshakes_s_.find(session.session_id_) == handshakes_s_.end())
+		{
+			LogError() << "session:" << session << " has shake flag.  shake:" << session.shake_id_ << ", but not found in shakes map.";
+		}
+		else
+		{
+			handshakes_s_.erase(session.session_id_);
+			LogInfo() << "session:" << session << " has shake flag.  shake:" << session.shake_id_ << ", erased.";
+		}
+		
 		return 0;
 	}
 
@@ -1398,7 +1451,7 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 				session.on_connected_ = NULL;
 				auto state = session.state_;
 				close_session(session.inst_id_, false, KNTR_TIMEOUT);
-				on(*this, session, false, state, abs(session.connect_time_ - now_ms));
+				on(*this, session, false, state, abs(session.state_time_ - now_ms));
 				return 0;
 			}
 			close_session(session.inst_id_, false, KNTR_TIMEOUT);

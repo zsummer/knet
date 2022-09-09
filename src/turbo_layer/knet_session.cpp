@@ -56,7 +56,7 @@ s32 KNetSession::reset()
 	{
 		slot.inst_id_ = -1;
 	}
-	connect_time_ = 0;
+	state_time_ = 0;
 	connect_expire_time_ = 0;
 	on_connected_ = NULL;
 	last_send_ts_ = 0;
@@ -73,7 +73,10 @@ s32 KNetSession::init(KNetTurbo& turbo, u16 flag)
 	{
 		return -1;
 	}
-	state_ = KNTS_CREATED;
+	if (state_ != KNTS_CREATED)
+	{
+		return -2;
+	}
 	flag_ = flag;
 	salt_id_ = ((u64)rand() << 32) | (u32)rand();
 

@@ -79,11 +79,12 @@ public:
 	char box_[16];
 	std::array<KNetSocketSlot, KNT_MAX_SLOTS> slots_;
 
-	s64 connect_time_;
+	
 	s64 connect_expire_time_;
 	s64 connect_resends_;
 	KNetOnConnect on_connected_;
 public:
+	s64 state_time_;
 	s64 last_send_ts_;
 	s64 last_recv_ts_;
 };
