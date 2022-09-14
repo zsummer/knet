@@ -33,7 +33,8 @@ struct KNetConfig
 	std::string remote_ip;
 	u16 remote_port;
 
-
+	u32 snd_lost;
+	u32 rcv_lost;
 };
 
 

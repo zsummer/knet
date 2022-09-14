@@ -36,11 +36,11 @@ struct KNetAddress
     char debug_string_[KNET_READABLE_ADDR_LEN];
     const char* debug_string() const { return debug_string_; }
 
-    KNetAddress()
-    {
-        real_addr_.in.sa_family = AF_UNSPEC;
-        debug_string_[0] = '\0';
-    }
+    //KNetAddress()
+    //{
+    //    real_addr_.in.sa_family = AF_UNSPEC;
+    //    debug_string_[0] = '\0';
+    //}
 
     s32 family() const { return real_addr_.in.sa_family; }
     u16 port() const { return family() == AF_INET6 ? ntohs(real_addr_.in6.sin6_port) : ntohs(real_addr_.in4.sin_port); }

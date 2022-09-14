@@ -23,11 +23,10 @@ void KNetAssert(bool assert_expr, const char* s)
 		KNetEnv::serialize(); 
 		exit(-1);
 	}
-
 }
 
 
-s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_times, s32 interval, s32 keep,  s32 data_len)
+s32 test_session_connect_mix(s32 session_count, bool double_stream, u32 lost1, u32 lost2,  s32 send_times, s32 interval, s32 keep,  s32 data_len)
 {
 	LogInfo() << "";
 	LogInfo() << "============================================================================================";
@@ -56,10 +55,10 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	KNetAssert(ret == 0, "");
 
 	mc.clear();
-	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 ,0, 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870, lost1, lost1 });
 	if (double_stream)
 	{
-		mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870  ,0, 0 });
+		mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 , lost2, lost2 });
 	}
 
 
@@ -285,19 +284,16 @@ int main(int argc, char* argv[])
 	FNLog::FastStartDebugLogger();
 	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
-	s32 sessions = 500;
-
-#ifdef WIN32
-	sessions = 250;
-#endif // WIN32
+	s32 sessions = 5;
 
 
 	if (argc > 1)
 	{
 		sessions = atoi(argv[1]);
 	}
-	KNetAssert(test_session_connect_mix(sessions, true, 1, 5, 20000, 200) == 0, "");
-	KNetAssert(test_session_connect_mix(sessions, true, 1, 5, 20000, 8000) == 0, "");
+	KNetAssert(test_session_connect_mix(sessions, false, 5, 5, 1, 5, 20000, 200) == 0, "");
+    KNetAssert(test_session_connect_mix(sessions, false, 15, 15, 1, 5, 20000, 8000) == 0, "");
+    KNetAssert(test_session_connect_mix(sessions, true, 15, 15, 1, 5, 20000, 8000) == 0, "");
 
 
 

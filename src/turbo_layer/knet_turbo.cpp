@@ -196,6 +196,8 @@ s32 KNetTurbo::start_server(const KNetConfigs& configs)
 		ns->state_ = KNTS_ESTABLISHED;
 		ns->refs_++;
 		ns->flag_ |= KNTF_SERVER;
+		ns->debug_recv_lost_ = c.rcv_lost;
+		ns->debug_send_lost_ = c.snd_lost;
 	}
 
 	if (has_error)
@@ -306,6 +308,8 @@ s32 KNetTurbo::start_connect(KNetSession& session, KNetOnConnect on_connected, s
 		ns->flag_ = KNTF_CLINET;
 		ns->slot_id_ = i;
 		ns->salt_id_ = session.salt_id_;
+		ns->debug_recv_lost_ = c.rcv_lost;
+		ns->debug_send_lost_ = c.snd_lost;
 
 		KNetSocketSlot slot;
 		slot.inst_id_ = ns->inst_id_;
@@ -1212,7 +1216,7 @@ s32 KNetTurbo::close_session(s32 inst_id, bool passive, s32 code)
 			continue;
 		}
 
-		if (s.flag_ != session.flag_)
+		if ( ((s.flag_ & session.flag_) & (KNTF_SERVER| KNTF_CLINET) )  == 0)
 		{
 			LogError() << "error";
 			KNetEnv::error_count()++;
@@ -1638,14 +1642,14 @@ void KNetTurbo::show_info(KNetSession& session)
 		if (session.kcp_->send_cnt > 0)
 		{
 			LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_INFO, 0, 0, FNLog::LOG_PREFIX_NULL)
-				<< "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " rsend rate:" << session.kcp_->send_rsend_cnt * 1.0 / session.kcp_->send_cnt
-				<< ", lost rate:" << session.kcp_->send_lost_cnt * 1.0 / session.kcp_->send_cnt;
+				<< "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " is_server[" << session.is_server() <<"]  rsend rate : " << session.kcp_->send_rsend_cnt * 100 / session.kcp_->send_cnt
+				<< "%, lost rate:" << session.kcp_->send_lost_cnt * 100 / session.kcp_->send_cnt <<"%";
 		}
 	}
 
     for (auto& slot : session.slots_)
     {
-        if (slot.inst_id_ == -1 || slot.inst_id_ >= session.slots_.size())
+        if (slot.inst_id_ == -1 || slot.inst_id_ >= (s32)session.slots_.size())
         {
             continue;
         }

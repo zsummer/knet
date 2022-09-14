@@ -20,8 +20,8 @@ s32 test_session_connect_mix()
 
 
 	KNetConfigs mc;
-	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
-	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0  ,0, 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0  ,0, 0 });
 
 	std::shared_ptr< KNetTurbo> sp_tb = std::make_shared<KNetTurbo>();
 	KNetTurbo& turbo = *sp_tb;
@@ -30,8 +30,8 @@ s32 test_session_connect_mix()
 	KNetAssert(ret == 0, "");
 
 	mc.clear();
-	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
-	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870  ,0, 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870  ,0, 0 });
 	KNetSession* session = NULL;
 	ret = turbo.create_connect(mc, session);
 	KNetAssert(ret == 0, "");
@@ -119,8 +119,8 @@ s32 test_session_connect()
 
 
 	KNetConfigs mc;
-	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 });
-	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 ,0, 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0  ,0, 0 });
 
 	std::shared_ptr< KNetTurbo> sp_tb1 = std::make_shared<KNetTurbo>();
 	KNetTurbo& turbo1 = *sp_tb1;
@@ -133,8 +133,8 @@ s32 test_session_connect()
 	KNetAssert(ret == 0, "");
 
 	mc.clear();
-	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 });
-	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870 });
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870 ,0, 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.2", 0, "127.0.0.2", 19870  ,0, 0 });
 	KNetSession* session = NULL;
 	ret = turbo2.create_connect(mc, session);
 	KNetAssert(ret == 0, "");

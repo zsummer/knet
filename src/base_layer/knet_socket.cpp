@@ -109,6 +109,14 @@ s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
     probe_snd_cnt_++;
     probe_snd_bytes_ += len;
     last_send_ts_ = KNetEnv::now_ms();
+    if (debug_send_lost_ > 0)
+    {
+        u32 rd = (u32)rand() % 100;
+        if (rd < debug_send_lost_)
+        {
+            return 0;
+        }
+    }
     s32 ret = sendto(skt_, pkg_data, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
     if (ret == SOCKET_ERROR)
     {
@@ -119,33 +127,44 @@ s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
 
 s32 KNetSocket::recv_packet(char* buf, s32& len, KNetAddress& remote, s64 now_ms)
 {
-    socklen_t addr_len = sizeof(remote.real_addr_.in6);
-    int ret = recvfrom(skt_, buf, len, 0, (sockaddr*)&remote.real_addr_.in6, &addr_len);
-    if (ret == 0)
+    int ret = 0;
+    do 
     {
-        len = 0;
-        return 0;
-    }
-#ifdef WIN32
-    if (ret < 0 && KNetEnv::error_code() == WSAEWOULDBLOCK)
-    {
-        len = 0;
-        return 0;
-    }
-#else
-    if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-    {
-        len = 0;
-        return 0;
-    }
-#endif // WIN32
-    if (ret < 0)
-    {
-        len = 0;
-        //LogError() << "error:" << KNetEnv::error_code();
-        return -1;
-    }
-    
+        socklen_t addr_len = sizeof(remote.real_addr_.in6);
+        ret = recvfrom(skt_, buf, len, 0, (sockaddr*)&remote.real_addr_.in6, &addr_len);
+        if (ret == 0)
+        {
+            len = 0;
+            return 0;
+        }
+    #ifdef WIN32
+        if (ret < 0 && KNetEnv::error_code() == WSAEWOULDBLOCK)
+        {
+            len = 0;
+            return 0;
+        }
+    #else
+        if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+        {
+            len = 0;
+            return 0;
+        }
+    #endif // WIN32
+        if (ret < 0)
+        {
+            len = 0;
+            //LogError() << "error:" << KNetEnv::error_code();
+            return -1;
+        }
+        if (debug_recv_lost_ > 0)
+        {
+            u32 rd = (u32)rand() % 100;
+            if (rd < debug_recv_lost_)
+            {
+                continue;
+            }
+        }
+    } while (0);
     len = ret;
     KNetEnv::call_mem(KNTP_SKT_RECV, ret);
     probe_rcv_cnt_++;

@@ -16,8 +16,8 @@ KNetTurbo turbo;
 s32 test_session_bind()
 {
 	KNetConfigs mc;
-	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0});
-	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.1", 19870, "", 0 ,0, 0 });
+	mc.emplace_back(KNetConfig{ "127.0.0.2", 19870, "", 0  ,0, 0 });
 	
 	s32 ret = turbo.start_server(mc);
 	KNetAssert(ret == 0, "");

@@ -65,6 +65,8 @@ private:
     u64 probe_rcv_bytes_;
     s64 last_send_ts_;
     s64 last_recv_ts_;
+    u32 debug_send_lost_;
+    u32 debug_recv_lost_;
     //up param
 public:
     u16 state_;
