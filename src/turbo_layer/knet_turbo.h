@@ -86,8 +86,9 @@ private:
 	s32 recv_one_packet(KNetSocket&, s64 now_ms);
 	void on_readable(KNetSocket&, s64 now_ms);
 	
-
-
+public:
+    void show_info();
+    void show_info(KNetSession& session);
 
 private:
 	static int kcp_output(const char* buf, int len, ikcpcb* kcp, void* user, int user_id);

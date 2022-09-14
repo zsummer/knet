@@ -136,6 +136,8 @@ static int ikcp_output(ikcpcb *kcp, const void *data, int size)
 		ikcp_log(kcp, IKCP_LOG_OUTPUT, "[RO] %ld bytes", (long)size);
 	}
 	if (size == 0) return 0;
+    kcp->send_cnt++;
+    kcp->send_bytes += size;
 	return kcp->output((const char*)data, size, kcp, kcp->user, kcp->user_id);
 }
 
@@ -172,6 +174,14 @@ ikcpcb* ikcp_create(IUINT32 conv, void *user,  int user_id)
 	kcp->ts_lastack = 0;
 	kcp->ts_probe = 0;
 	kcp->probe_wait = 0;
+
+	kcp->send_cnt = 0;
+    kcp->send_bytes = 0;
+    kcp->send_lost_cnt = 0;
+    kcp->send_lost_bytes = 0;
+    kcp->send_rsend_cnt = 0;
+    kcp->send_rsend_bytes = 0;
+
 	kcp->snd_wnd = IKCP_WND_SND;
 	kcp->rcv_wnd = IKCP_WND_RCV;
 	kcp->rmt_wnd = IKCP_WND_RCV;
@@ -996,6 +1006,10 @@ void ikcp_flush(ikcpcb *kcp)
 			}
 			segment->resendts = current + segment->rto;
 			lost = 1;
+            kcp->send_lost_cnt++;
+            kcp->send_lost_bytes += segment->len;
+            kcp->send_rsend_cnt++;
+            kcp->send_rsend_bytes += segment->len;
 		}
 		else if (segment->fastack >= resent) {
 			if ((int)segment->xmit <= kcp->fastlimit || 
@@ -1005,6 +1019,8 @@ void ikcp_flush(ikcpcb *kcp)
 				segment->fastack = 0;
 				segment->resendts = current + segment->rto;
 				change++;
+				kcp->send_rsend_cnt++;
+				kcp->send_rsend_bytes += segment->len;
 			}
 		}
 

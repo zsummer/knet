@@ -244,9 +244,12 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 
 
 	KNetEnv::serialize();
+	
+
 
 	for (s32 i = 0; i < 10; i++)
 	{
+		turbos[i]->show_info();
 		ret = turbos[i]->stop();
 		KNetAssert(ret == 0, "");
 	}

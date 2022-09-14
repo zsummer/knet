@@ -1627,3 +1627,42 @@ s32 KNetTurbo::get_socket_count_by_state(u16 state)
 
 
 
+void KNetTurbo::show_info(KNetSession& session)
+{
+	if (session.kcp_)
+	{
+		LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_INFO, 0, 0, FNLog::LOG_PREFIX_NULL)
+			<< "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " total send:" << session.kcp_->send_cnt << ", bytes:" << session.kcp_->send_bytes
+			<< ", rsend:" << session.kcp_->send_rsend_cnt << ", rsend bytes:" << session.kcp_->send_rsend_bytes << ", lost:" << session.kcp_->send_lost_cnt << ", lost bytes:" << session.kcp_->send_lost_bytes
+			<< ", srtt:" << session.kcp_->rx_srtt << ", rttval:" << session.kcp_->rx_rttval;
+		if (session.kcp_->send_cnt > 0)
+		{
+			LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_INFO, 0, 0, FNLog::LOG_PREFIX_NULL)
+				<< "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ << " rsend rate:" << session.kcp_->send_rsend_cnt * 1.0 / session.kcp_->send_cnt
+				<< ", lost rate:" << session.kcp_->send_lost_cnt * 1.0 / session.kcp_->send_cnt;
+		}
+	}
+
+    for (auto& slot : session.slots_)
+    {
+        if (slot.inst_id_ == -1 || slot.inst_id_ >= session.slots_.size())
+        {
+            continue;
+        }
+        LOG_STREAM_DEFAULT_LOGGER(0, FNLog::PRIORITY_INFO, 0, 0, FNLog::LOG_PREFIX_NULL)
+            << "session inst:" << session.inst_id_ << ", session id:" << session.session_id_ <<", slot:" << nss_[slot.inst_id_].slot_id_ << " total send:" << nss_[slot.inst_id_].probe_snd_cnt_ << ", bytes:" << nss_[slot.inst_id_].probe_snd_bytes_;
+    }
+}
+
+
+void KNetTurbo::show_info()
+{
+	for (auto& session: sessions_)
+	{
+		if (session.state_>= KNTS_ESTABLISHED)
+		{
+			show_info(session);
+		}
+	}
+}
+

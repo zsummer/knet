@@ -59,6 +59,7 @@ public:
 	s32 init(KNetTurbo& turbo, u16 flag = KNTF_SERVER);
 	s32 destory();
 
+
 public:
 	bool is_server() {return flag_ & KNTF_SERVER;}
 public:
