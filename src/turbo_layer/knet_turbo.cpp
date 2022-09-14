@@ -731,6 +731,7 @@ void KNetTurbo::on_ch(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 		{
 
 		}
+		(void)new_session_id;
 	}
 
 
@@ -883,8 +884,15 @@ void KNetTurbo::on_sh(KNetSocket& s, KNetHeader& hdr, const char* pkg, s32 len, 
 		nss_[slot.inst_id_].state_ = KNTS_ESTABLISHED;
 	}
 	session.last_recv_ts_ = now_ms;
-	LogDebug() << "client connected: s:" << s << ", hdr:" << hdr << ", session:" << session << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
-
+	remote.format();
+	if (session.connect_resends_ > 0)
+	{
+        LogInfo() << "client connected: s:" << s << ", hdr:" << hdr << ", session:" << session << " resend:" << session.connect_resends_ << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
+	}
+	else
+	{
+        LogDebug() << "client connected: s:" << s << ", hdr:" << hdr << ", session:" << session << " resend:" << session.connect_resends_ << "  :   " << s.local().debug_string() << " --> " << remote.debug_string();
+	}
 	KNetEnv::call_user(KNTP_SES_ON_CONNECTED);
 	if (session.on_connected_)
 	{
@@ -1401,7 +1409,7 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 {
 	if (session.state_ == KNTS_RST || session.state_ == KNTS_LINGER)
 	{
-		if (abs(session.last_recv_ts_ - now_ms) > 5000 && abs(session.last_send_ts_ - now_ms) > 5000)
+		if (abs(session.last_recv_ts_ - now_ms) > 5000 && abs(session.last_send_ts_ - now_ms) > KNET_HS_KEEP)
 		{
 			session.state_ = KNTS_CREATED;
 			session.state_time_ = KNetEnv::now_ms();
@@ -1419,7 +1427,7 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 		return 0;
 	}
 
-	if (session.state_ == KNTS_ESTABLISHED &&  session.is_server() &&  session.flag_ & KNTF_SHAKE &&  abs(session.state_time_ - now_ms) > 5000 )
+	if (session.state_ == KNTS_ESTABLISHED &&  session.is_server() &&  session.flag_ & KNTF_SHAKE &&  abs(session.state_time_ - now_ms) > KNET_HS_KEEP)
 	{
 		session.flag_ &= ~(KNTF_SHAKE);
 		if (handshakes_s_.find(session.session_id_) == handshakes_s_.end())
@@ -1429,7 +1437,7 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 		else
 		{
 			handshakes_s_.erase(session.session_id_);
-			LogInfo() << "session:" << session << " has shake flag.  shake:" << session.shake_id_ << ", erased.";
+			LogDebug() << "session:" << session << " has shake flag.  shake:" << session.shake_id_ << ", erased.";
 		}
 		
 		return 0;
@@ -1470,17 +1478,17 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 				{
 					continue;
 				}
-				if (abs(nss_[s.inst_id_].last_send_ts_ - now_ms) > 600 && abs(nss_[s.inst_id_].last_recv_ts_ - now_ms) > 600)
+				if (abs(nss_[s.inst_id_].last_send_ts_ - now_ms) > KNET_HS_RESEND +(rand()%50) && abs(nss_[s.inst_id_].last_recv_ts_ - now_ms) > KNET_HS_RESEND)
 				{
 					session.connect_resends_++;
 					KNetEnv::call_mem(KNTP_SKT_R_PROBE, 1);
-					LogWarn() << "skt:" << nss_[s.inst_id_] << " resend probe.  session : " << session << ", shake:" << session.shake_id_ << ", salt:" << session.salt_id_;
-					send_probe(nss_[s.inst_id_], session.connect_resends_);
+					LogWarn() << "skt:" << nss_[s.inst_id_] << " resend probe.  session : " << session << ", shake:" << session.shake_id_ << ", salt:" << session.salt_id_ <<"local:" << nss_[s.inst_id_].local().debug_string() << "  remote:" << nss_[s.inst_id_].remote().debug_string() ;
+                    send_probe(nss_[s.inst_id_], session.connect_resends_);
 				}
 			}
 		}
 
-		if (session.state_ == KNTS_CH && abs(session.last_recv_ts_ - now_ms) > 600 && abs(session.last_send_ts_ - now_ms) > 600)
+		if (session.state_ == KNTS_CH && abs(session.last_recv_ts_ - now_ms) > KNET_HS_RESEND && abs(session.last_send_ts_ - now_ms) > KNET_HS_RESEND)
 		{
 
 			for (auto& s : session.slots_)

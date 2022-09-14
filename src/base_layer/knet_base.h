@@ -93,10 +93,7 @@ const int INVALID_SOCKET = -1;
 const static s32 KNT_UPKT_SIZE = 1350;
 
 
-//client  
-#ifndef KNET_MAX_SOCKETS
-#define KNET_MAX_SOCKETS 1000
-#endif // KNET_MAX_SOCKETS
+
 
 
 

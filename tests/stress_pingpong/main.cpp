@@ -287,11 +287,6 @@ int main(int argc, char* argv[])
 	LogInfo() << "start up";
 	s32 sessions = 500;
 
-#ifdef WIN32
-	sessions = 250;
-#endif // WIN32
-
-
 	if (argc > 1)
 	{
 		sessions = atoi(argv[1]);

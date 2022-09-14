@@ -102,7 +102,6 @@ s32 KNetSocket::init(const char* localhost, u16 localport, const char* remote_ip
 }
 
 
-
 s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
 {
     KNetEnv::call_mem(KNTP_SKT_SEND, len);
@@ -117,6 +116,7 @@ s32 KNetSocket::send_packet(const char* pkg_data, s32 len, KNetAddress& remote)
             return 0;
         }
     }
+
     s32 ret = sendto(skt_, pkg_data, len, 0, remote.sockaddr_ptr(), remote.sockaddr_len());
     if (ret == SOCKET_ERROR)
     {

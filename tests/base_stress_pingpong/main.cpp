@@ -105,8 +105,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		}
 		KNetAssert(ret == 0, "");
 		KNetAssert(session != NULL, "");
-		s32 connect_tested = 1;
-		ret = turbo.start_connect(*session, on_connect, 5000);
+		ret = turbo.start_connect(*session, on_connect, 15000);
 		if (ret != 0)
 		{
 			volatile int aa = 0;
@@ -114,7 +113,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		KNetAssert(ret == 0, "");
 		KNetAssert(KNetEnv::error_count() == 0, "");
 
-		for (size_t i = 0; i < 10; i++)
+		for (s32 i = 0; i < 10; i++)
 		{
 			ret = turbo.do_tick();
 			KNetAssert(ret == 0, "");
@@ -130,7 +129,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 	s32 loop_count = 10 * 1000 / interval;
 
 	s64 now = KNetEnv::now_ms();
-	for (size_t i = 0; i < loop_count; i++)
+	for (s32 i = 0; i < loop_count; i++)
 	{
 		ret = turbo.do_tick();
 		KNetAssert(ret == 0, "");
@@ -140,7 +139,7 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, s32 send_tim
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(interval));
 	}
-	s64 finish_now = KNetEnv::now_ms();
+
 	LogInfo() << "";
 	LogInfo() << "==========================================================";
 	LogInfo() << "session_count:" << session_count << ", double_stream:" << double_stream << ", interval:" << interval;
@@ -180,18 +179,11 @@ int main()
 	FNLog::FastStartDebugLogger();
 	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
-#ifdef WIN32
+
 	KNetAssert(test_session_connect_mix(1, false, 1, 10, 500) == 0, "");
 	KNetAssert(test_session_connect_mix(50, false, 1, 10, 500) == 0, "");
-	KNetAssert(test_session_connect_mix(50, false, 1, 10, 1000) == 0, "");
-	KNetAssert(test_session_connect_mix(25, true, 20, 10, 1000) == 0, "");
-#else
-	KNetAssert(test_session_connect_mix(1, false, 1, 10, 500) == 0, "");
-	KNetAssert(test_session_connect_mix(500, false, 1, 10, 500) == 0, "");
-	KNetAssert(test_session_connect_mix(800, false, 1, 10, 1000) == 0, "");
-	KNetAssert(test_session_connect_mix(500, true, 20, 10, 1000) == 0, "");
-
-#endif // WIN32
+	KNetAssert(test_session_connect_mix(70, false, 1, 10, 1000) == 0, "");
+	KNetAssert(test_session_connect_mix(30, true, 20, 10, 1000) == 0, "");
 
 
 

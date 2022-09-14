@@ -26,6 +26,11 @@
 #include <functional>
 
 
+//client  
+#ifndef KNET_MAX_SOCKETS
+#define KNET_MAX_SOCKETS 1200
+#endif // KNET_MAX_SOCKETS
+
 
 #ifndef KNET_MAX_SESSIONS
 #define KNET_MAX_SESSIONS 2000
@@ -44,6 +49,9 @@ static_assert(KNET_MAX_SESSIONS >= 10, "");
 #define KNET_MAX_SND_WND (5120)
 #define KNET_MAX_RCV_WND (5120)
 #define KNET_FAST_MIN_RTO (50)
+
+#define KNET_HS_RESEND 480
+#define KNET_HS_KEEP 6000
 
 const static u32 KCP_RECV_BUFF_LEN = 20 * 1024;
 //============================================================================
@@ -277,27 +285,21 @@ static inline u64 knet_encode_pkt_mac(const char* data, s32 len,  KNetHeader& hd
 
 
 
-static inline char* KNetEncodeKNetDeviceInfo(char* p, const KNetDeviceInfo& dvi)
+static inline char* knet_encode_packet(char* p, const KNetDeviceInfo& dvi)
 {
 	p = ikcp_encode_str(p, dvi.device_name, KNET_DEVICE_NAME_LEN);
 	p = ikcp_encode_str(p, dvi.device_type, KNET_DEVICE_NAME_LEN);
-	p = ikcp_encode_str(p, dvi.device_mac, KNET_DEVICE_NAME_LEN);
 	p = ikcp_encode_str(p, dvi.sys_name, KNET_DEVICE_NAME_LEN);
-	p = ikcp_encode_str(p, dvi.sys_version, KNET_DEVICE_NAME_LEN);
-	p = ikcp_encode_str(p, dvi.os_name, KNET_DEVICE_NAME_LEN);
-	static_assert(KNET_DEVICE_NAME_LEN * 6 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
+	static_assert(KNET_DEVICE_NAME_LEN * 3 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
 	return p;
 }
 
-static inline const char* KNetDecodeKNetDeviceInfo(const char* p, KNetDeviceInfo& dvi)
+static inline const char* knet_decode_packet(const char* p, KNetDeviceInfo& dvi)
 {
 	p = ikcp_decode_str(p, dvi.device_name, KNET_DEVICE_NAME_LEN);
 	p = ikcp_decode_str(p, dvi.device_type, KNET_DEVICE_NAME_LEN);
-	p = ikcp_decode_str(p, dvi.device_mac, KNET_DEVICE_NAME_LEN);
 	p = ikcp_decode_str(p, dvi.sys_name, KNET_DEVICE_NAME_LEN);
-	p = ikcp_decode_str(p, dvi.sys_version, KNET_DEVICE_NAME_LEN);
-	p = ikcp_decode_str(p, dvi.os_name, KNET_DEVICE_NAME_LEN);
-	static_assert(KNET_DEVICE_NAME_LEN * 6 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
+	static_assert(KNET_DEVICE_NAME_LEN * 3 == KNetDeviceInfo::PKT_SIZE, "sync change this.");
 	return p;
 }
 
@@ -326,7 +328,7 @@ static inline char* knet_encode_packet(char* p, const KNetProbe& pkt)
 	p = ikcp_encode64u(p, pkt.shake_id);
 	p = ikcp_encode64u(p, pkt.salt_id);
 	p = ikcp_encode64u(p, pkt.resend);
-	p = KNetEncodeKNetDeviceInfo(p, pkt.dvi);
+	p = knet_encode_packet(p, pkt.dvi);
 	return p;
 }
 
@@ -337,7 +339,7 @@ static inline const char* knet_decode_packet(const char* p, KNetProbe& pkt)
 	p = ikcp_decode64u(p, &pkt.shake_id);
 	p = ikcp_decode64u(p, &pkt.salt_id);
 	p = ikcp_decode64u(p, &pkt.resend);
-	p = KNetDecodeKNetDeviceInfo(p, pkt.dvi);
+	p = knet_decode_packet(p, pkt.dvi);
 	return p;
 }
 
@@ -398,7 +400,7 @@ static inline char* knet_encode_packet(char* p, const KNetCH& pkt)
 	p = ikcp_encode64u(p, pkt.session_id);
 	p = ikcp_encode_str(p, pkt.cg, 16);
 	p = ikcp_encode_str(p, pkt.cp, 16);
-	p = KNetEncodeKNetDeviceInfo(p, pkt.dvi);
+	p = knet_encode_packet(p, pkt.dvi);
 	p = ikcp_encode_str(p, pkt.noise, 400);
 	return p;
 }
@@ -411,7 +413,7 @@ static inline const char* knet_decode_packet(const char* p, KNetCH& pkt)
 	p = ikcp_decode64u(p, &pkt.session_id);
 	p = ikcp_decode_str(p, pkt.cg, 16);
 	p = ikcp_decode_str(p, pkt.cp, 16);
-	p = KNetDecodeKNetDeviceInfo(p, pkt.dvi);
+	p = knet_decode_packet(p, pkt.dvi);
 	p = ikcp_decode_str(p, pkt.noise, 400);
 	return p;
 }

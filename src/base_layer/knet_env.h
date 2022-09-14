@@ -28,13 +28,10 @@
 const static u32 KNET_DEVICE_NAME_LEN = 64;
 struct KNetDeviceInfo
 {
-	static const u32 PKT_SIZE = KNET_DEVICE_NAME_LEN * 6;
+	static const u32 PKT_SIZE = KNET_DEVICE_NAME_LEN * 3;
 	char device_name[KNET_DEVICE_NAME_LEN];
 	char device_type[KNET_DEVICE_NAME_LEN];
-	char device_mac[KNET_DEVICE_NAME_LEN];
 	char sys_name[KNET_DEVICE_NAME_LEN];
-	char sys_version[KNET_DEVICE_NAME_LEN];
-	char os_name[KNET_DEVICE_NAME_LEN];
 	bool check_str(char* src, s32 src_len)
 	{
 		for (s32 i = 0; i < src_len; i++)
@@ -51,10 +48,7 @@ struct KNetDeviceInfo
 	{
 		return check_str(device_name, KNET_DEVICE_NAME_LEN)
 			&& check_str(device_type, KNET_DEVICE_NAME_LEN)
-			&& check_str(device_mac, KNET_DEVICE_NAME_LEN)
-			&& check_str(sys_name, KNET_DEVICE_NAME_LEN)
-			&& check_str(sys_version, KNET_DEVICE_NAME_LEN)
-			&& check_str(os_name, KNET_DEVICE_NAME_LEN);
+			&& check_str(sys_name, KNET_DEVICE_NAME_LEN);
 	}
 };
 static_assert(sizeof(KNetDeviceInfo) == KNetDeviceInfo::PKT_SIZE, "");
