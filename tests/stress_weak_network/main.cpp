@@ -26,11 +26,11 @@ void KNetAssert(bool assert_expr, const char* s)
 }
 
 
-s32 test_session_connect_mix(s32 session_count, bool double_stream, u32 lost1, u32 lost2,  s32 send_times, s32 interval, s32 keep,  s32 data_len)
+s32 test_session_connect_mix(u32 mod, s32 session_count, bool double_stream, u32 lost1, u32 lost2,  s32 send_times, s32 interval, s32 keep,  s32 data_len)
 {
 	LogInfo() << "";
 	LogInfo() << "============================================================================================";
-	LogInfo() << "         stress: session:" << session_count <<"  double_stream:" << double_stream <<" send_times:" << send_times <<"  interval:" << interval <<"ms keep:" << keep/1000 <<"s  one data:" << data_len;
+	LogInfo() << "stress boot mod:1s 2c 3mix:" << mod <<"  session cnt:" << session_count <<"  double_stream : " << double_stream << "  lost1 : " << lost1 << "%, lost2 : " << lost2 << " % send_times : " << send_times << "  interval : " << interval << "ms keep : " << keep / 1000 << "s  one data : " << data_len;
 	LogInfo() << "============================================================================================";
 	if (send_times == 0)
 	{
@@ -50,9 +50,17 @@ s32 test_session_connect_mix(s32 session_count, bool double_stream, u32 lost1, u
 	}
 
 	KNetTurbo& server_c = *turbos[0];
-
-	s32 ret = server_c.start_server(mc);
-	KNetAssert(ret == 0, "");
+	s32 ret = 0;
+	if ((mod&1) != 0)
+	{
+		LogInfo() << "start server";
+        ret = server_c.start_server(mc);
+        KNetAssert(ret == 0, "");
+	}
+	if ((mod&2) ==0)
+	{
+		session_count = 0;
+	}
 
 	mc.clear();
 	mc.emplace_back(KNetConfig{ "127.0.0.1", 0,"127.0.0.1", 19870, lost1, lost1 });
@@ -285,15 +293,24 @@ int main(int argc, char* argv[])
 	FNLog::BatchSetChannelConfig(FNLog::GetDefaultLogger(), FNLog::CHANNEL_CFG_PRIORITY, FNLog::PRIORITY_INFO);
 	LogInfo() << "start up";
 	s32 sessions = 5;
-
-
-	if (argc > 1)
+	u32 mod = 3;
+	LogInfo() << "input mod[1 server 2 client 3mix]  connects[num]";
+	if (argc > 2)
 	{
-		sessions = atoi(argv[1]);
+        mod = atoi(argv[1]);
+		sessions = atoi(argv[2]);
 	}
-	KNetAssert(test_session_connect_mix(sessions, false, 5, 5, 1, 5, 20000, 200) == 0, "");
-    KNetAssert(test_session_connect_mix(sessions, false, 15, 15, 1, 5, 20000, 8000) == 0, "");
-    KNetAssert(test_session_connect_mix(sessions, true, 15, 15, 1, 5, 20000, 8000) == 0, "");
+	if (mod == 1)
+	{
+		KNetAssert(test_session_connect_mix(mod, sessions, true, 15, 15, 1, 5, 100000, 8000) == 0, "");
+	}
+	else
+    {
+        KNetAssert(test_session_connect_mix(mod, sessions, false, 5, 5, 1, 5, 20000, 200) == 0, "");
+        KNetAssert(test_session_connect_mix(mod, sessions, false, 15, 15, 1, 5, 20000, 8000) == 0, "");
+        KNetAssert(test_session_connect_mix(mod, sessions, true, 15, 15, 1, 5, 20000, 8000) == 0, "");
+	}
+
 
 
 

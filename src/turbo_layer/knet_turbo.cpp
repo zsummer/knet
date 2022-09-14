@@ -99,7 +99,7 @@ void KNetTurbo::on_readable(KNetSocket& s, s64 now_ms)
 	//LogDebug() << s;
 	s32 loop_count = 1;
 	s32 ret = recv_one_packet(s, now_ms);
-	while (ret > 0)
+	while (ret > 0 && s.state_ != KNTS_INVALID)
 	{
 		loop_count++;
 		ret = recv_one_packet(s, now_ms);
@@ -1369,7 +1369,10 @@ s32 KNetTurbo::do_tick()
 			}
 			continue;
 		}
-
+		if (s.state_ == KNTS_INVALID)
+		{
+			continue;
+		}
 		on_readable(s, now_ms);
 	}
 
@@ -1462,8 +1465,9 @@ s32 KNetTurbo::on_timeout(KNetSession& session, s64 now_ms)
 				auto on = std::move(session.on_connected_);
 				session.on_connected_ = NULL;
 				auto state = session.state_;
+				s64 state_time = session.state_time_;
 				close_session(session.inst_id_, false, KNTR_TIMEOUT);
-				on(*this, session, false, state, abs(session.state_time_ - now_ms));
+				on(*this, session, false, state, abs(state_time - now_ms));
 				return 0;
 			}
 			close_session(session.inst_id_, false, KNTR_TIMEOUT);
